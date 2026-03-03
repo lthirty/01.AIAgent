@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.9.0 - 2026-03-03
+
+- Added RK3588 project-specific reusable template:
+  - `materials/templates/RK3588_SCH_PCB_规则模板_v1.0.md`
+- Added fill-in tables for real project execution:
+  - power rail table
+  - clock planning table
+  - boot/reset configuration table
+  - DDR and high-speed interface constraints table
+  - risk matrix and EVT/DVT verification table
+- Updated role prompts for RK3588-first behavior:
+  - `SCH design`: prefer RK3588 template when input includes RK3588/RK3588S
+  - `PCB design`: prefer RK3588 template when input includes RK3588/RK3588S
+
+## v1.8.0 - 2026-03-03
+
+- Added reusable SCH/PCB rule template:
+  - `materials/templates/SCH_PCB_规则模板_v1.0.md`
+- Organized template by hardware modules for real-project reuse:
+  - Power
+  - Clock
+  - Reset/Boot
+  - High-speed interfaces (DDR/USB/PCIe/Ethernet)
+  - EMC/ESD
+  - Thermal
+  - DFM/DFT
+- Updated role prompts to enforce template-based outputs:
+  - `SCH design`
+  - `PCB design`
+- Enforced structured deliverables in SCH/PCB outputs:
+  - executable constraint table
+  - risk matrix (P0/P1/P2)
+  - verification plan (EVT/DVT)
+  - pending information checklist
+
 ## v1.7.0 - 2026-03-03
 
 - Added cloud deployment support with Docker artifacts:
