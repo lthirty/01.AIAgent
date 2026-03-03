@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Console</title>
+  <style>
+    :root {
+      --bg: #0f1720;
+      --panel: #162231;
+      --line: #28415f;
+      --text: #e8f0fa;
+      --muted: #9ab0ca;
+      --btn: #2f6fed;
+      --btn2: #0ea5a6;
+      --btn3: #0b7b4b;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 10% 0%, #1b2c40 0%, var(--bg) 45%), var(--bg);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 28px auto;
+      padding: 0 16px 28px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+    }
+    .panel {
+      background: linear-gradient(180deg, #1a2a3e 0%, #132031 100%);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p { margin: 0 0 14px; color: var(--muted); }
+    textarea {
+      width: 100%;
+      min-height: 240px;
+      resize: vertical;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #0e1a28;
+      color: var(--text);
+      padding: 12px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .grid-btn {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+    }
+    .auth-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    input {
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #0e1a28;
+      color: var(--text);
+      padding: 10px;
+      font-size: 14px;
+      width: 100%;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      color: white;
+      padding: 10px 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--btn);
+    }
+    button.alt { background: var(--btn2); }
+    button.test { background: var(--btn3); }
+    button.warn { background: var(--warn); color: #111827; }
+    button:disabled { opacity: .65; cursor: not-allowed; }
+    .status {
+      margin-top: 10px;
+      min-height: 22px;
+      color: #9be8ff;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .list {
+      margin: 8px 0 0;
+      padding: 0;
+      list-style: none;
+      max-height: 560px;
+      overflow: auto;
+    }
+    .list li {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: #0f1c2a;
+    }
+    .hint { color: #9ab0ca; font-size: 12px; }
+    a { color: #7dd3fc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    @media (max-width: 900px) {
+      .wrap { grid-template-columns: 1fr; }
+      .grid-btn { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .auth-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="panel">
+      <h1>多角色 Agent 控制台</h1>
+      <p>支持远程登录。先登录，再执行单角色或协作任务。</p>
+
+      <div class="auth-row">
+        <input id="username" placeholder="用户名" value="admin" />
+        <input id="password" type="password" placeholder="密码" />
+        <button id="loginBtn">登录</button>
+        <button id="logoutBtn" class="warn">退出</button>
+      </div>
+      <div class="hint">登录后 token 仅保存在当前浏览器 LocalStorage。</div>
+
+      <textarea id="pd" placeholder="请粘贴产品团队定义（目标、约束、里程碑、预算、质量要求等）"></textarea>
+      <div class="grid-btn">
+        <button data-role="CTO">运行 CTO</button>
+        <button data-role="Design/Test">运行 Design/Test</button>
+        <button data-role="DFM">运行 DFM</button>
+        <button data-role="Risk">运行 Risk</button>
+        <button data-role="Review">运行 Review</button>
+        <button id="runAll" class="alt">多角色协作讨论</button>
+        <button id="testLlm" class="test">测试模型连通性</button>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+
+    <aside class="panel">
+      <h1>结果文件</h1>
+      <p>全部结果保存在 `outputs/*.md`，可直接点击查看。</p>
+      <ul id="results" class="list"></ul>
+    </aside>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const pdEl = document.getElementById('pd');
+    const resultEl = document.getElementById('results');
+    const roleButtons = Array.from(document.querySelectorAll('button[data-role]'));
+    const runAllBtn = document.getElementById('runAll');
+    const testLlmBtn = document.getElementById('testLlm');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const usernameEl = document.getElementById('username');
+    const passwordEl = document.getElementById('password');
+
+    const TOKEN_KEY = 'agent_console_token';
+
+    function getToken() {
+      return localStorage.getItem(TOKEN_KEY) || '';
+    }
+
+    function setToken(token) {
+      if (!token) {
+        localStorage.removeItem(TOKEN_KEY);
+      } else {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
+    }
+
+    function authHeaders() {
+      const token = getToken();
+      return token ? { 'X-Access-Token': token } : {};
+    }
+
+    function setBusy(busy, text='') {
+      [...roleButtons, runAllBtn, testLlmBtn, loginBtn, logoutBtn].forEach(b => b.disabled = busy);
+      statusEl.textContent = text;
+    }
+
+    async function authedFetch(url, options = {}) {
+      const headers = Object.assign({}, options.headers || {}, authHeaders());
+      const resp = await fetch(url, Object.assign({}, options, { headers }));
+      if (resp.status === 401) {
+        setToken('');
+        throw new Error('未登录或会话已过期，请重新登录');
+      }
+      return resp;
+    }
+
+    async function refreshResults() {
+      const r = await authedFetch('/api/results');
+      const data = await r.json();
+      resultEl.innerHTML = '';
+      for (const item of data.results || []) {
+        const li = document.createElement('li');
+        const token = getToken();
+        const link = token ? `${item.url}?t=${encodeURIComponent(token)}` : item.url;
+        li.innerHTML = `<a href="${link}" target="_blank">${item.name}</a><div class="meta">${item.mtime} | ${(item.size/1024).toFixed(1)} KB</div>`;
+        resultEl.appendChild(li);
+      }
+    }
+
+    async function login() {
+      const username = usernameEl.value.trim();
+      const password = passwordEl.value;
+      if (!username || !password) {
+        statusEl.textContent = '请输入用户名和密码';
+        return;
+      }
+      setBusy(true, '正在登录...');
+      try {
+        const r = await fetch('/api/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ username, password })
+        });
+        const data = await r.json();
+        if (!data.ok) throw new Error(data.error || '登录失败');
+        setToken(data.token || '');
+        statusEl.textContent = '登录成功';
+        passwordEl.value = '';
+        await refreshResults();
+      } catch (e) {
+        statusEl.textContent = `登录失败: ${e.message}`;
+      } finally {
+        setBusy(false, statusEl.textContent);
+      }
+    }
+
+    function logout() {
+      setToken('');
+      resultEl.innerHTML = '';
+      statusEl.textContent = '已退出';
+    }
+
+    async function runRole(role) {
+      const productDefinition = pdEl.value.trim();
+      if (!productDefinition) {
+        statusEl.textContent = '请先输入产品团队定义';
+        return;
+      }
+      setBusy(true, `正在运行 ${role}...`);
+      try {
+        const r = await authedFetch('/api/run-agent', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ role, productDefinition })
+        });
+        const data = await r.json();
+        if (!data.ok) throw new Error(data.error || '执行失败');
+        const token = getToken();
+        const link = `${data.url}?t=${encodeURIComponent(token)}`;
+        statusEl.innerHTML = `${role} 已完成: <a href="${link}" target="_blank">${data.file}</a>`;
+        await refreshResults();
+      } catch (e) {
+        statusEl.textContent = `错误: ${e.message}`;
+      } finally {
+        setBusy(false, statusEl.textContent);
+      }
+    }
+
+    async function runCollaboration() {
+      const productDefinition = pdEl.value.trim();
+      if (!productDefinition) {
+        statusEl.textContent = '请先输入产品团队定义';
+        return;
+      }
+      setBusy(true, '正在进行多角色协作讨论（可能需要几十秒）...');
+      try {
+        const r = await authedFetch('/api/run-collaboration', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ productDefinition })
+        });
+        const data = await r.json();
+        if (!data.ok) throw new Error(data.error || '执行失败');
+        const token = getToken();
+        const link = `${data.url}?t=${encodeURIComponent(token)}`;
+        statusEl.innerHTML = `协作完成: <a href="${link}" target="_blank">${data.file}</a>`;
+        await refreshResults();
+      } catch (e) {
+        statusEl.textContent = `错误: ${e.message}`;
+      } finally {
+        setBusy(false, statusEl.textContent);
+      }
+    }
+
+    async function testLlm() {
+      setBusy(true, '正在测试模型连通性...');
+      try {
+        const r = await authedFetch('/api/test-llm', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: '{}'
+        });
+        const data = await r.json();
+        if (!data.ok) throw new Error(data.error || '测试失败');
+        const x = data.result || {};
+        statusEl.textContent = `连通成功\nprovider: ${x.provider}\nmodel: ${x.model}\npreview: ${x.preview || ''}`;
+      } catch (e) {
+        statusEl.textContent = `连通失败: ${e.message}`;
+      } finally {
+        setBusy(false, statusEl.textContent);
+      }
+    }
+
+    roleButtons.forEach(btn => btn.addEventListener('click', () => runRole(btn.dataset.role)));
+    runAllBtn.addEventListener('click', runCollaboration);
+    testLlmBtn.addEventListener('click', testLlm);
+    loginBtn.addEventListener('click', login);
+    logoutBtn.addEventListener('click', logout);
+
+    if (getToken()) {
+      refreshResults().catch(() => {
+        setToken('');
+        statusEl.textContent = '会话失效，请重新登录';
+      });
+    } else {
+      statusEl.textContent = '请先登录';
+    }
+  </script>
+</body>
+</html>
