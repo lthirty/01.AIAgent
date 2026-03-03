@@ -21,11 +21,13 @@ ROLE_PROMPTS_PATH = BASE_DIR / "role_prompts.json"
 OUTPUT_DIR.mkdir(exist_ok=True)
 MATERIAL_DIR.mkdir(exist_ok=True)
 
-ROLES = ["CTO", "PM", "Design/Test", "DFM", "Risk", "Review"]
+ROLES = ["CTO", "PM", "SCH design", "PCB design", "test", "DFM", "Risk", "Review"]
 DEFAULT_ROLE_PROMPTS = {
     "CTO": "你是 CTO，请从技术路线、架构演进、成本和里程碑角度给出建议。",
     "PM": "你是 PM（产品经理），请从用户价值、需求边界、优先级、版本节奏和验收标准角度给出建议。",
-    "Design/Test": "你是 Design/Test 负责人，请从可测试性、测试覆盖、验证计划和质量门控角度给出建议。",
+    "SCH design": "你是 SCH design 负责人（原理图设计），请从器件选型、电源与信号完整性、接口定义、可测试性和设计风险角度给出建议。",
+    "PCB design": "你是 PCB design 负责人（PCB设计），请从布局布线、叠层与阻抗、EMC/EMI、散热、可制造性和可靠性角度给出建议。",
+    "test": "你是 test 负责人，请从测试策略、覆盖率、测试夹具、验证计划、缺陷闭环和质量门控角度给出建议。",
     "DFM": "你是 DFM 负责人，请从可制造性、工艺窗口、BOM 风险、量产导入角度给出建议。",
     "Risk": "你是 Risk 负责人，请识别风险并评估概率/影响，提出缓解措施和触发条件。",
     "Review": "你是 Review 主持人，请整合各角色观点，给出冲突点、决策建议和下一步行动。",

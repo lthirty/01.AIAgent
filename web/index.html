@@ -173,6 +173,10 @@
     }
     .scene { height: 100px; display: flex; align-items: flex-end; justify-content: center; gap: 14px; }
     .avatar {
+      --head: #ffd9b1;
+      --head-border: #f3c99a;
+      --outfit: #5ea3d6;
+      --outfit-border: #87b9de;
       width: 54px;
       height: 72px;
       position: relative;
@@ -188,8 +192,8 @@
       width: 30px;
       height: 30px;
       border-radius: 50%;
-      background: #ffd9b1;
-      border: 2px solid #f3c99a;
+      background: var(--head);
+      border: 2px solid var(--head-border);
     }
     .avatar::after {
       content: "";
@@ -199,8 +203,8 @@
       width: 38px;
       height: 40px;
       border-radius: 12px 12px 6px 6px;
-      background: #5ea3d6;
-      border: 2px solid #87b9de;
+      background: var(--outfit);
+      border: 2px solid var(--outfit-border);
     }
     .avatar .name {
       position: absolute;
@@ -216,6 +220,14 @@
       transform: translateY(0);
       animation: bob 1.2s ease-in-out infinite;
     }
+    .avatar.role-cto { --outfit: #4b8fd7; --outfit-border: #76b5f2; }
+    .avatar.role-pm { --outfit: #4a78c7; --outfit-border: #7ea5e7; --head: #f7d6b3; }
+    .avatar.role-sch { --outfit: #2fa486; --outfit-border: #6dceb6; }
+    .avatar.role-pcb { --outfit: #3a9e4f; --outfit-border: #7fcf90; --head: #f5cc9f; }
+    .avatar.role-test { --outfit: #6a7aa1; --outfit-border: #9eb0dc; }
+    .avatar.role-dfm { --outfit: #b87a36; --outfit-border: #e0a55f; }
+    .avatar.role-risk { --outfit: #c85858; --outfit-border: #e48a8a; }
+    .avatar.role-review { --outfit: #7b63c3; --outfit-border: #ad97e5; }
     .scene.cto .desk {
       display: block;
     }
@@ -331,7 +343,9 @@
       <div class="btn-grid">
         <button data-role="CTO">运行 CTO</button>
         <button data-role="PM">运行 PM</button>
-        <button data-role="Design/Test">运行 Design/Test</button>
+        <button data-role="SCH design">运行 SCH design</button>
+        <button data-role="PCB design">运行 PCB design</button>
+        <button data-role="test">运行 test</button>
         <button data-role="DFM">运行 DFM</button>
         <button data-role="Risk">运行 Risk</button>
         <button data-role="Review">运行 Review</button>
@@ -342,12 +356,14 @@
       <div class="anim-zone">
         <h2>工作动画</h2>
         <div class="scene" id="scene">
-          <div class="avatar cto"><div class="name">CTO</div></div>
-          <div class="avatar"><div class="name">PM</div></div>
-          <div class="avatar"><div class="name">Design</div></div>
-          <div class="avatar"><div class="name">DFM</div></div>
-          <div class="avatar"><div class="name">Risk</div></div>
-          <div class="avatar"><div class="name">Review</div></div>
+          <div class="avatar cto role-cto"><div class="name">CTO</div></div>
+          <div class="avatar role-pm"><div class="name">PM</div></div>
+          <div class="avatar role-sch"><div class="name">SCH</div></div>
+          <div class="avatar role-pcb"><div class="name">PCB</div></div>
+          <div class="avatar role-test"><div class="name">Test</div></div>
+          <div class="avatar role-dfm"><div class="name">DFM</div></div>
+          <div class="avatar role-risk"><div class="name">Risk</div></div>
+          <div class="avatar role-review"><div class="name">Review</div></div>
           <div class="desk"></div>
           <div class="laptop"></div>
         </div>
