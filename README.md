@@ -1,43 +1,42 @@
 # Multi-role Agent Console
 
-本项目提供本地网页控制台 + Python 后端服务，支持：
+本项目提供本地网页控制台 + Python 后端服务，支持多角色 Agent 分析与协作。
 
-- 单角色执行：`CTO` / `Design/Test` / `DFM` / `Risk` / `Review`
-- 多角色协作讨论：自动两轮讨论并生成最终联合结论
+## 当前版本
+
+- `v1.2.0`（2026-03-03）
+
+## 版本说明
+
+- `v1.2.0`
+  - 新增 `PM（产品经理）` 角色，支持单角色运行与协作讨论。
+  - 前端增加 `运行 PM` 按钮与 PM 动画角色。
+- `v1.1.0`
+  - 登录密码调整为 `admin`。
+  - 登录成功后在标题右侧显示当前用户名。
+  - 登录成功后账号输入框、密码输入框、登录按钮置灰并禁用。
+- `v1.0.0`
+  - 初始版本：登录鉴权、单角色分析、多角色协作、结果输出。
+
+详细记录见 `CHANGELOG.md`。
+
+## 功能
+
+- 单角色执行：`CTO` / `PM` / `Design/Test` / `DFM` / `Risk` / `Review`
+- 多角色协作讨论：自动多轮讨论并生成联合结论
 - 每次执行输出 Markdown 到 `outputs/`
-- 登录鉴权（账号密码 + token 会话）
+- 登录鉴权：账号密码 + token 会话
 
-## 一键启动脚本
+## 启动方式
 
 - 本机访问：`启动Agent控制台.bat`
 - 局域网访问：`启动Agent控制台_局域网登录.bat`
-- 跨网络远程访问（家里/办公室）：`启动Agent控制台_远程登录_Cloudflare.bat`
-
-## 家里和办公室都能访问（推荐）
-
-使用 `启动Agent控制台_远程登录_Cloudflare.bat`：
-
-1. 安装 `cloudflared` 并加入 PATH
-2. 双击脚本
-3. 终端会显示一个 `https://xxxxx.trycloudflare.com` 地址
-4. 家里和办公室都可打开该地址登录使用
+- 远程访问（Cloudflare）：`启动Agent控制台_远程登录_Cloudflare.bat`
 
 ## 默认登录信息
 
-脚本默认：
-
 - 用户名：`admin`
-- 密码：`ChangeMe_2026`
-
-建议你立即改脚本里的 `WEB_PASSWORD`。
-
-## 模型配置（已写入脚本）
-
-脚本已内置：
-
-- `LLM_PROVIDER=minimax`
-- `MINIMAX_MODEL=MiniMax-M2.5`
-- `MINIMAX_BASE_URL=https://api.minimaxi.com/anthropic`
+- 密码：`admin`
 
 ## API
 
@@ -47,3 +46,4 @@
 - `POST /api/test-llm`
 - `GET /api/results`
 - `GET /outputs/<filename>?t=<token>`
+
