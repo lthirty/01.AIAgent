@@ -1,0 +1,26 @@
+{
+  "projects": [
+    {
+      "id": "b05ed4ff529a",
+      "name": "项目_2026-03-03 08:26",
+      "productDefinition": "用RV1103设计一个支持AOV功能的摄像头产品",
+      "createdAt": "2026-03-03T16:26:38",
+      "updatedAt": "2026-03-03T18:19:21",
+      "lastFile": "20260303_181921_collaboration.md",
+      "history": [
+        {
+          "time": "2026-03-03T18:19:21",
+          "type": "collaboration",
+          "file": "20260303_181921_collaboration.md",
+          "url": "/outputs/20260303_181921_collaboration.md"
+        },
+        {
+          "time": "2026-03-03T16:38:06",
+          "type": "collaboration",
+          "file": "20260303_163806_collaboration.md",
+          "url": "/outputs/20260303_163806_collaboration.md"
+        }
+      ]
+    }
+  ]
+}
