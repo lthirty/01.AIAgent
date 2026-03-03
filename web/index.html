@@ -120,6 +120,13 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
     }
+    .btn-blue { background: #1d79e7; }
+    .btn-brown { background: #8a5a2b; }
+    .btn-orange { background: #e15b2c; }
+    .btn-green { background: #1a8e56; }
+    .start-row-2 { grid-column: 1; }
+    .start-row-3 { grid-column: 1; }
+    .start-row-4 { grid-column: 1; }
     .status {
       margin-top: 10px;
       min-height: 22px;
@@ -367,16 +374,16 @@
       </div>
 
       <div class="btn-grid">
-        <button data-role="CTO">运行 CTO</button>
-        <button data-role="PM">运行 PM</button>
-        <button data-role="SCH design">运行 SCH design</button>
-        <button data-role="PCB design">运行 PCB design</button>
-        <button data-role="test">运行 test</button>
-        <button data-role="DFM">运行 DFM</button>
-        <button data-role="Risk">运行 Risk</button>
-        <button data-role="Review">运行 Review</button>
-        <button id="runAll" class="alt">多角色协助讨论</button>
-        <button id="testLlm" class="test">测试模型连通性</button>
+        <button data-role="CTO" class="btn-blue">运行 CTO</button>
+        <button data-role="PM" class="btn-blue">运行 PM</button>
+        <button data-role="SCH design" class="btn-brown start-row-2">运行 SCH design</button>
+        <button data-role="PCB design" class="btn-brown">运行 PCB design</button>
+        <button data-role="test" class="btn-brown">运行 test</button>
+        <button data-role="DFM" class="btn-orange start-row-3">运行 DFM</button>
+        <button data-role="Risk" class="btn-orange">运行 Risk</button>
+        <button data-role="Review" class="btn-orange">运行 Review</button>
+        <button id="runAll" class="btn-green start-row-4">多角色协助讨论</button>
+        <button id="testLlm" class="btn-green">测试模型连通性</button>
       </div>
 
       <div class="anim-zone">

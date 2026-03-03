@@ -7,8 +7,11 @@ import json
 import os
 import re
 import secrets
+import subprocess
+import sys
 import traceback
 import uuid
+from html import unescape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib import error, parse, request
@@ -25,14 +28,14 @@ MATERIAL_DIR.mkdir(exist_ok=True)
 
 ROLES = ["CTO", "PM", "SCH design", "PCB design", "test", "DFM", "Risk", "Review"]
 DEFAULT_ROLE_PROMPTS = {
-    "CTO": "你是 CTO，请从技术路线、架构演进、成本和里程碑角度给出建议。",
-    "PM": "你是 PM（产品经理），请从用户价值、需求边界、优先级、版本节奏和验收标准角度给出建议。",
-    "SCH design": "你是 SCH design 负责人（原理图设计），请从器件选型、电源与信号完整性、接口定义、可测试性和设计风险角度给出建议。",
-    "PCB design": "你是 PCB design 负责人（PCB设计），请从布局布线、叠层与阻抗、EMC/EMI、散热、可制造性和可靠性角度给出建议。",
-    "test": "你是 test 负责人，请从测试策略、覆盖率、测试夹具、验证计划、缺陷闭环和质量门控角度给出建议。",
-    "DFM": "你是 DFM 负责人，请从可制造性、工艺窗口、BOM 风险、量产导入角度给出建议。",
-    "Risk": "你是 Risk 负责人，请识别风险并评估概率/影响，提出缓解措施和触发条件。",
-    "Review": "你是 Review 主持人，请整合各角色观点，给出冲突点、决策建议和下一步行动。",
+    "CTO": "你是 CTO。请从技术路线、系统架构、成本、里程碑与资源配置角度给出可执行建议。",
+    "PM": "你是 PM（产品经理）。请从用户价值、需求边界、优先级、版本节奏、验收标准角度给出建议。",
+    "SCH design": ("你是 SCH design（原理图设计）负责人。请细化关键模块和关键信号设计：电源树与时序、时钟/复位、DDR/高速接口、关键器件选型与去耦、上电时序、保护电路、测试点规划。输出中必须给出：设计约束、关键参数目标、原理图检查清单、风险与规避措施。"),
+    "PCB design": ("你是 PCB design（PCB设计）负责人。请细化布局布线和关键网络规则：层叠建议、阻抗控制、差分对约束、回流路径、分区隔离、EMC/EMI、散热、DFM 规则。输出中必须给出：关键网络布线约束表、版图分区建议、SI/PI/EMI 风险与验证点。"),
+    "test": "你是 test 负责人。请从测试策略、覆盖率、测试夹具、验证计划、缺陷闭环和质量门禁给出建议。",
+    "DFM": "你是 DFM 负责人。请从可制造性、工艺窗口、BOM 风险、量产导入角度给出建议。",
+    "Risk": "你是 Risk 负责人。请识别风险并评估概率/影响，提出缓解措施和触发条件。",
+    "Review": "你是 Review 主持人。请整合各角色观点，给出冲突点、决策建议和下一步行动。",
 }
 
 AUTH_USERNAME = os.getenv("WEB_USERNAME", "admin").strip()
@@ -40,6 +43,8 @@ AUTH_PASSWORD = "admin"
 AUTH_ENABLED = os.getenv("WEB_AUTH_ENABLED", "1").strip() != "0"
 TOKEN_TTL_SECONDS = int(os.getenv("WEB_TOKEN_TTL_SECONDS", "43200"))
 SESSIONS = {}
+WEB_RESEARCH_ENABLED = os.getenv("WEB_RESEARCH_ENABLED", "1").strip() != "0"
+CHINESE_OUTPUT_RULE = "所有输出必须使用简体中文，不得使用英文作为主体内容。"
 
 
 def now_ts() -> str:
@@ -192,6 +197,93 @@ def append_project_history(project_id: str, run_type: str, file_name: str, produ
             return
 
 
+def extract_pdf_text(pdf_path: Path, max_chars: int = 24000) -> str:
+    try:
+        from pypdf import PdfReader  # type: ignore
+    except Exception:
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "pypdf"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=90,
+            )
+            from pypdf import PdfReader  # type: ignore
+        except Exception:
+            return (
+                f"[PDF 文件 {pdf_path.name} 未解析：自动安装 pypdf 失败。"
+                "请手动执行 `python -m pip install pypdf` 后重试。]"
+            )
+
+    try:
+        reader = PdfReader(str(pdf_path))
+        texts = []
+        for page in reader.pages:
+            texts.append(page.extract_text() or "")
+        merged = "\n".join(texts).strip()
+        if not merged:
+            return f"[PDF 文件 {pdf_path.name} 已读取，但未提取到文本（可能是扫描版）。]"
+        return merged[:max_chars]
+    except Exception as e:
+        return f"[PDF 文件 {pdf_path.name} 解析失败: {e}]"
+
+
+def _duckduckgo_search(query: str, max_items: int = 5) -> list:
+    search_url = "https://html.duckduckgo.com/html/?q=" + parse.quote(query)
+    req = request.Request(
+        search_url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0 Safari/537.36"
+            )
+        },
+    )
+    with request.urlopen(req, timeout=12) as resp:
+        html = resp.read().decode("utf-8", errors="ignore")
+
+    links = re.findall(r'<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', html, flags=re.I | re.S)
+    snippets = re.findall(r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>', html, flags=re.I | re.S)
+
+    out = []
+    for i, (href, title_html) in enumerate(links[:max_items]):
+        title = re.sub(r"<[^>]+>", "", title_html)
+        title = unescape(title).strip()
+        snippet = ""
+        if i < len(snippets):
+            snippet = re.sub(r"<[^>]+>", "", snippets[i])
+            snippet = unescape(snippet).strip()
+        out.append({"title": title, "url": unescape(href), "snippet": snippet})
+    return out
+
+
+def build_web_research_context(product_definition: str) -> str:
+    if not WEB_RESEARCH_ENABLED:
+        return "[联网检索已关闭]"
+
+    # 只用前 120 字构建查询，避免过长查询导致失败
+    query_seed = re.sub(r"\s+", " ", product_definition.strip())[:120]
+    query = f"{query_seed} datasheet 设计 要点"
+    try:
+        items = _duckduckgo_search(query, max_items=5)
+    except Exception as e:
+        return f"[联网检索失败: {e}]"
+
+    if not items:
+        return "[联网检索无结果]"
+
+    lines = ["## 联网检索补充（自动）", f"- 查询词: {query}", ""]
+    for idx, it in enumerate(items, start=1):
+        lines.append(f"### 结果 {idx}")
+        lines.append(f"- 标题: {it['title']}")
+        lines.append(f"- 链接: {it['url']}")
+        if it["snippet"]:
+            lines.append(f"- 摘要: {it['snippet'][:220]}")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
 def load_role_prompts() -> dict:
     if not ROLE_PROMPTS_PATH.exists():
         return dict(DEFAULT_ROLE_PROMPTS)
@@ -218,9 +310,12 @@ def load_material_text(material_id: str) -> str:
     target = (MATERIAL_DIR / Path(material_id).name).resolve()
     if target.parent != MATERIAL_DIR.resolve() or not target.exists() or not target.is_file():
         return ""
+    if target.suffix.lower() == ".pdf":
+        return extract_pdf_text(target)
+
     text_ext = {".txt", ".md", ".csv", ".json", ".yaml", ".yml", ".log", ".py", ".js", ".ts", ".html", ".css"}
     if target.suffix.lower() not in text_ext:
-        return f"[文件 {target.name} 为非文本格式，已附带文件名供参考]"
+        return f"[文件 {target.name} 为非文本格式，当前仅展示文件名]"
     try:
         content = target.read_text(encoding="utf-8")
     except UnicodeDecodeError:
@@ -231,9 +326,16 @@ def load_material_text(material_id: str) -> str:
 def merge_product_definition(product_definition: str, material_ids) -> str:
     base = product_definition.strip()
     material_ids = material_ids or []
+    sections = [base]
+
+    web_context = build_web_research_context(base)
+    if web_context:
+        sections.extend(["\n\n---\n\n", web_context, "\n"])
+
     if not material_ids:
-        return base
-    sections = [base, "\n\n---\n\n## 参考资料\n"]
+        return "".join(sections).strip()
+
+    sections.extend(["\n\n---\n\n## 参考资料\n"])
     for idx, material_id in enumerate(material_ids, start=1):
         content = load_material_text(material_id)
         if not content:
@@ -252,19 +354,17 @@ def merge_product_definition(product_definition: str, material_ids) -> str:
 class LLM:
     def __init__(self):
         self.provider = os.getenv("LLM_PROVIDER", "auto").strip().lower()
-
         self.minimax_api_key = os.getenv("MINIMAX_API_KEY", "").strip()
         self.minimax_model = os.getenv("MINIMAX_MODEL", "MiniMax-M2.5").strip()
         self.minimax_base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.com/anthropic").strip()
-
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip()
         self.openai_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com").strip()
-
         self.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1200"))
         self.temperature = float(os.getenv("LLM_TEMPERATURE", "0.4"))
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
+        system_prompt = f"{system_prompt}\n\n{CHINESE_OUTPUT_RULE}"
         errors = []
         prefer_minimax = self.provider in ("auto", "minimax")
         prefer_openai = self.provider in ("auto", "openai")
@@ -285,7 +385,6 @@ class LLM:
 
     def test_connection(self) -> dict:
         errors = []
-
         if self.provider in ("auto", "minimax"):
             if not self.minimax_api_key:
                 errors.append("minimax: MINIMAX_API_KEY 未设置")
@@ -385,13 +484,13 @@ class LLM:
             [
                 "",
                 "## 结论摘要",
-                "- 目标澄清: 将产品定义转为可执行需求、约束与验收指标。",
-                "- 关键动作: 拆分阶段里程碑，明确 owner、截止时间和度量方法。",
+                "- 输出策略: 先给结论，再给依据，再给行动项。",
+                "- 约束策略: 对未知参数列出确认清单与临时设计假设。",
                 "",
                 "## 建议行动",
-                "1. 列出 Top 5 需求与不可妥协约束。",
-                "2. 为每条需求定义量化验收标准。",
-                "3. 设立每周风险复盘与跨角色评审。",
+                "1. 补齐关键 Datasheet 参数与约束。",
+                "2. 按模块建立设计检查清单与验证计划。",
+                "3. 每轮评审输出风险闭环与责任人。",
                 "",
                 "## 输入摘录",
                 "```text",
@@ -406,12 +505,27 @@ class AgentService:
     def __init__(self):
         self.llm = LLM()
 
+    def _role_focus(self, role: str) -> str:
+        if role == "SCH design":
+            return (
+                "必须细化：关键器件选型依据、供电/时钟/复位方案、关键接口引脚分配、"
+                "关键模块（电源、主控、存储、外设）连接细节、关键信号完整性约束。"
+            )
+        if role == "PCB design":
+            return (
+                "必须细化：层叠与阻抗规划、关键网络（时钟/DDR/高速差分/电源）约束、"
+                "回流路径、EMI 控制、热设计、可制造性规则。"
+            )
+        return "请基于资料给出可执行、可验证的工程结论。"
+
     def run_single(self, role: str, product_definition: str):
         if role not in ROLES:
             raise ValueError(f"Unknown role: {role}")
-        system = ROLE_PROMPTS[role]
+        system = ROLE_PROMPTS[role] + "\n" + CHINESE_OUTPUT_RULE
         user = (
-            "以下是产品定义，请输出 markdown，包含：结论摘要、关键问题、建议、下一步行动。\n\n"
+            "请基于以下输入输出 Markdown 报告，章节至少包括：结论摘要、关键问题、设计细节、建议、下一步行动。\n"
+            f"附加要求：{self._role_focus(role)}\n"
+            "禁止仅以“Datasheet 参数未知”结束，必须给出：需要确认的参数清单 + 当前可行的临时设计假设。\n\n"
             f"{product_definition.strip()}"
         )
         content = self.llm.generate(system, user)
@@ -427,28 +541,31 @@ class AgentService:
         initial = {}
         for role in ROLES:
             prompt = (
-                "你将参与跨职能评审。先独立给出观点。输出 markdown，包含：立场、发现、建议、阻塞项。\n\n"
+                "你将参与跨职能评审。先独立给出观点。输出 markdown，包含：立场、发现、设计细节、建议、阻塞项。\n"
+                f"附加要求：{self._role_focus(role)}\n"
+                "禁止仅写“Datasheet 参数未知”，请给出需确认参数清单与临时假设。\n\n"
                 f"产品定义:\n{product_definition.strip()}"
             )
-            initial[role] = self.llm.generate(ROLE_PROMPTS[role], prompt)
+            initial[role] = self.llm.generate(ROLE_PROMPTS[role] + "\n" + CHINESE_OUTPUT_RULE, prompt)
         rounds.append(("Round 1", initial))
 
         discussion = {}
         digest = "\n\n".join([f"### {r}\n{initial[r][:2500]}" for r in ROLES])
         for role in ROLES:
             prompt = (
-                "请基于以下其他角色观点进行回应与协同，输出 markdown，包含：认同点、分歧点、需验证假设、行动项。\n\n"
+                "请基于其他角色观点进行回应与协同，输出 markdown，包含：认同点、分歧点、需验证假设、行动项。\n"
+                f"附加要求：{self._role_focus(role)}\n\n"
                 f"产品定义:\n{product_definition.strip()}\n\n"
                 f"跨角色观点摘要:\n{digest}"
             )
-            discussion[role] = self.llm.generate(ROLE_PROMPTS[role], prompt)
+            discussion[role] = self.llm.generate(ROLE_PROMPTS[role] + "\n" + CHINESE_OUTPUT_RULE, prompt)
         rounds.append(("Round 2", discussion))
 
         round_summaries = []
         for label, data in rounds:
             round_input = "\n\n".join([f"## {role}\n{data[role][:2200]}" for role in ROLES])
             summary = self.llm.generate(
-                ROLE_PROMPTS["Review"],
+                ROLE_PROMPTS["Review"] + "\n" + CHINESE_OUTPUT_RULE,
                 "请基于本轮各角色发言输出本轮总结（markdown），包含："
                 "本轮结论、主要共识、关键分歧、待验证项、下一步行动（最多5条）。\n\n"
                 f"本轮记录:\n{round_input}",
@@ -459,8 +576,9 @@ class AgentService:
             [f"## {label} - {role}\n{content[:3000]}" for label, data in rounds for role, content in data.items()]
         )
         final = self.llm.generate(
-            ROLE_PROMPTS["Review"],
-            "请输出最终联合结论（markdown），包含：最终决策、风险闭环、里程碑、责任分配(RACI)、本周行动清单。\n\n"
+            ROLE_PROMPTS["Review"] + "\n" + CHINESE_OUTPUT_RULE,
+            "请输出最终联合结论（markdown），包含：最终决策、风险闭环、里程碑、责任分配（RACI）、本周行动清单。\n"
+            "输出必须为中文。\n\n"
             f"产品定义:\n{product_definition.strip()}\n\n"
             f"讨论记录:\n{synthesis_input}",
         )
@@ -556,7 +674,7 @@ class Handler(BaseHTTPRequestHandler):
     def _need_auth(self, path: str) -> bool:
         if not AUTH_ENABLED:
             return False
-        if path in ["/", "/index.html", "/api/login"]:
+        if path in ["/", "/index.html", "/api/login", "/api/health"]:
             return False
         if path.startswith("/api/") or path.startswith("/outputs/") or path.startswith("/materials/"):
             return True
@@ -628,6 +746,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, "authEnabled": AUTH_ENABLED})
                 return
 
+            if path == "/api/health":
+                self._json(200, {"ok": True, "status": "healthy"})
+                return
+
             if path.startswith("/outputs/"):
                 name = parse.unquote(path.replace("/outputs/", "", 1))
                 safe = Path(name).name
@@ -668,7 +790,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._json(200, {"ok": True, "token": token, "expiresIn": TOKEN_TTL_SECONDS})
                     return
 
-                self._json(401, {"ok": False, "error": "用户名或密码错误"})
+                self._json(401, {"ok": False, "error": "鐢ㄦ埛鍚嶆垨瀵嗙爜閿欒"})
                 return
 
             if self._need_auth(self.path) and not self._authorized():
@@ -746,8 +868,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="Multi-role agent web console")
-    parser.add_argument("--host", default="0.0.0.0", help="Bind host, use 0.0.0.0 for LAN access")
-    parser.add_argument("--port", type=int, default=8787)
+    parser.add_argument("--host", default=os.getenv("HOST", "0.0.0.0"), help="Bind host, use 0.0.0.0 for LAN access")
+    parser.add_argument("--port", type=int, default=int(os.getenv("PORT", "8787")))
     args = parser.parse_args()
 
     print("=== Agent Console ===")
@@ -764,3 +886,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
