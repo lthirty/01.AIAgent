@@ -6,117 +6,294 @@
   <title>Agent Console</title>
   <style>
     :root {
-      --bg: #0f1720;
-      --panel: #162231;
-      --line: #28415f;
-      --text: #e8f0fa;
-      --muted: #9ab0ca;
-      --btn: #2f6fed;
-      --btn2: #0ea5a6;
-      --btn3: #0b7b4b;
-      --warn: #f59e0b;
+      --bg: #0a1524;
+      --panel: #11243a;
+      --line: #2a4f70;
+      --text: #ecf6ff;
+      --muted: #9cb7d3;
+      --btn: #1d79e7;
+      --btn-alt: #0e9f8f;
+      --btn-test: #1a8e56;
+      --btn-warn: #f4b000;
+      --progress: #0bd9a5;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
       color: var(--text);
-      background: radial-gradient(circle at 10% 0%, #1b2c40 0%, var(--bg) 45%), var(--bg);
+      background:
+        radial-gradient(1200px 800px at -10% -20%, #27466b 0%, transparent 60%),
+        radial-gradient(1000px 700px at 120% -10%, #153758 0%, transparent 60%),
+        var(--bg);
       min-height: 100vh;
     }
     .wrap {
-      max-width: 1200px;
-      margin: 28px auto;
-      padding: 0 16px 28px;
+      max-width: 1300px;
+      margin: 20px auto;
+      padding: 0 14px 24px;
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 16px;
+      grid-template-columns: 1.25fr .95fr;
+      gap: 14px;
     }
     .panel {
-      background: linear-gradient(180deg, #1a2a3e 0%, #132031 100%);
+      background: linear-gradient(180deg, #14304b 0%, #0f2238 100%);
       border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      padding: 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
     }
-    h1 { margin: 0 0 8px; font-size: 22px; }
-    p { margin: 0 0 14px; color: var(--muted); }
-    textarea {
+    h1, h2 {
+      margin: 0 0 8px;
+      line-height: 1.2;
+    }
+    h1 { font-size: 22px; }
+    h2 { font-size: 16px; }
+    p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+    textarea, input, select {
       width: 100%;
-      min-height: 240px;
-      resize: vertical;
       border-radius: 10px;
       border: 1px solid var(--line);
-      background: #0e1a28;
+      background: #0b1a2c;
       color: var(--text);
-      padding: 12px;
-      line-height: 1.5;
+      padding: 10px;
       font-size: 14px;
     }
-    .grid-btn {
-      margin-top: 12px;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));
-      gap: 10px;
+    textarea { min-height: 180px; resize: vertical; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      color: #fff;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--btn);
+      white-space: nowrap;
+    }
+    button.alt { background: var(--btn-alt); }
+    button.test { background: var(--btn-test); }
+    button.warn { background: var(--btn-warn); color: #1f2937; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .auth-locked {
+      background: #5f6770 !important;
+      border-color: #7f8790 !important;
+      color: #d6dde5 !important;
+    }
+    .login-user {
+      margin-left: auto;
+      display: none;
+      align-items: center;
+      font-size: 12px;
+      color: #cde7ff;
+      background: #163451;
+      border: 1px solid #2a4f70;
+      border-radius: 999px;
+      padding: 4px 10px;
     }
     .auth-row {
       display: grid;
       grid-template-columns: 1fr 1fr auto auto;
-      gap: 10px;
-      margin-bottom: 12px;
-      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
     }
-    input {
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      background: #0e1a28;
-      color: var(--text);
-      padding: 10px;
-      font-size: 14px;
-      width: 100%;
+    .btn-grid {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
     }
-    button {
-      border: 0;
-      border-radius: 10px;
-      color: white;
-      padding: 10px 12px;
-      font-weight: 600;
-      cursor: pointer;
-      background: var(--btn);
-    }
-    button.alt { background: var(--btn2); }
-    button.test { background: var(--btn3); }
-    button.warn { background: var(--warn); color: #111827; }
-    button:disabled { opacity: .65; cursor: not-allowed; }
     .status {
       margin-top: 10px;
       min-height: 22px;
-      color: #9be8ff;
+      color: #93f5f3;
       font-size: 13px;
       white-space: pre-wrap;
     }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #0b1b2d;
+    }
     .list {
-      margin: 8px 0 0;
+      margin: 0;
       padding: 0;
       list-style: none;
-      max-height: 560px;
+      max-height: 240px;
       overflow: auto;
     }
     .list li {
       border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 8px;
-      background: #0f1c2a;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 6px;
+      background: #0f2135;
+      font-size: 12px;
     }
-    .hint { color: #9ab0ca; font-size: 12px; }
-    a { color: #7dd3fc; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
-    @media (max-width: 900px) {
+    .meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .inline {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .role-item { margin-bottom: 8px; }
+    .role-item label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 12px;
+      color: #9bd7ff;
+      font-weight: 700;
+    }
+    .role-item textarea { min-height: 88px; font-size: 12px; }
+    .anim-zone {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: linear-gradient(180deg, #10243b 0%, #0a1727 100%);
+      padding: 10px;
+      min-height: 170px;
+      position: relative;
+      overflow: hidden;
+    }
+    .scene { height: 100px; display: flex; align-items: flex-end; justify-content: center; gap: 14px; }
+    .avatar {
+      width: 54px;
+      height: 72px;
+      position: relative;
+      opacity: .3;
+      transform: translateY(8px);
+      transition: all .3s ease;
+    }
+    .avatar::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 12px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #ffd9b1;
+      border: 2px solid #f3c99a;
+    }
+    .avatar::after {
+      content: "";
+      position: absolute;
+      top: 30px;
+      left: 8px;
+      width: 38px;
+      height: 40px;
+      border-radius: 12px 12px 6px 6px;
+      background: #5ea3d6;
+      border: 2px solid #87b9de;
+    }
+    .avatar .name {
+      position: absolute;
+      bottom: -18px;
+      width: 100%;
+      text-align: center;
+      font-size: 10px;
+      color: #92b7d7;
+    }
+    .scene.cto .avatar.cto,
+    .scene.collab .avatar {
+      opacity: 1;
+      transform: translateY(0);
+      animation: bob 1.2s ease-in-out infinite;
+    }
+    .scene.cto .desk {
+      display: block;
+    }
+    .desk {
+      display: none;
+      position: absolute;
+      bottom: 28px;
+      width: 120px;
+      height: 10px;
+      background: #294d6f;
+      border-radius: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .laptop {
+      display: none;
+      position: absolute;
+      bottom: 38px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 52px;
+      height: 28px;
+      border: 2px solid #7fc7ff;
+      border-bottom: 10px solid #5b94c4;
+      border-radius: 4px;
+      background: #12273f;
+    }
+    .scene.cto .laptop { display: block; animation: flicker 1s linear infinite; }
+    .bubble {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1d3a58;
+      border: 1px solid #4d7ea7;
+      border-radius: 16px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: #c5ebff;
+      opacity: 0;
+    }
+    .scene.collab ~ .bubble { opacity: 1; animation: talk 1.6s ease-in-out infinite; }
+    .progress-wrap {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+      height: 18px;
+      background: #08111e;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #0694c8 0%, var(--progress) 100%);
+      transition: width .2s ease;
+    }
+    .progress-text {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #9ddac9;
+    }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes flicker {
+      0%, 100% { box-shadow: 0 0 0 transparent; }
+      50% { box-shadow: 0 0 10px rgba(100, 194, 255, .55); }
+    }
+    @keyframes talk {
+      0%,100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-5px); }
+    }
+    @media (max-width: 980px) {
       .wrap { grid-template-columns: 1fr; }
-      .grid-btn { grid-template-columns: repeat(2, minmax(0,1fr)); }
       .auth-row { grid-template-columns: 1fr; }
+      .btn-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .split { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -124,33 +301,67 @@
   <div class="wrap">
     <section class="panel">
       <h1>多角色 Agent 控制台</h1>
-      <p>支持远程登录。先登录，再执行单角色或协作任务。</p>
+      <p>支持登录、上传资料、单角色分析与多角色协同讨论。</p>
 
       <div class="auth-row">
         <input id="username" placeholder="用户名" value="admin" />
-        <input id="password" type="password" placeholder="密码" />
+        <input id="password" type="password" placeholder="密码（默认 admin）" />
         <button id="loginBtn">登录</button>
         <button id="logoutBtn" class="warn">退出</button>
       </div>
-      <div class="hint">登录后 token 仅保存在当前浏览器 LocalStorage。</div>
 
-      <textarea id="pd" placeholder="请粘贴产品团队定义（目标、约束、里程碑、预算、质量要求等）"></textarea>
-      <div class="grid-btn">
+      <textarea id="pd" placeholder="输入产品定义（目标、约束、里程碑、预算、质量要求等）"></textarea>
+
+      <div class="split">
+        <div class="card">
+          <h2>上传资料</h2>
+          <div class="inline">
+            <input id="uploadInput" type="file" />
+            <button id="uploadBtn" class="alt">上传</button>
+          </div>
+          <div class="small">勾选后会自动作为上下文给 Agent 分析。</div>
+          <ul id="materials" class="list"></ul>
+        </div>
+        <div class="card">
+          <h2>结果文件</h2>
+          <ul id="results" class="list"></ul>
+        </div>
+      </div>
+
+      <div class="btn-grid">
         <button data-role="CTO">运行 CTO</button>
         <button data-role="Design/Test">运行 Design/Test</button>
         <button data-role="DFM">运行 DFM</button>
         <button data-role="Risk">运行 Risk</button>
         <button data-role="Review">运行 Review</button>
-        <button id="runAll" class="alt">多角色协作讨论</button>
+        <button id="runAll" class="alt">多角色协助讨论</button>
         <button id="testLlm" class="test">测试模型连通性</button>
       </div>
+
+      <div class="anim-zone">
+        <h2>工作动画</h2>
+        <div class="scene" id="scene">
+          <div class="avatar cto"><div class="name">CTO</div></div>
+          <div class="avatar"><div class="name">Design</div></div>
+          <div class="avatar"><div class="name">DFM</div></div>
+          <div class="avatar"><div class="name">Risk</div></div>
+          <div class="avatar"><div class="name">Review</div></div>
+          <div class="desk"></div>
+          <div class="laptop"></div>
+        </div>
+        <div class="bubble" id="bubble">正在讨论关键方案...</div>
+        <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="progress-text" id="progressText">等待任务开始</div>
+      </div>
+
       <div class="status" id="status"></div>
     </section>
 
     <aside class="panel">
-      <h1>结果文件</h1>
-      <p>全部结果保存在 `outputs/*.md`，可直接点击查看。</p>
-      <ul id="results" class="list"></ul>
+      <h1>Agent 定义</h1>
+      <p>可查看并修改每个角色的定义，保存后立即生效。</p>
+      <div id="roleDefs"></div>
+      <button id="saveRoles" class="alt">保存角色定义</button>
     </aside>
   </div>
 
@@ -158,6 +369,8 @@
     const statusEl = document.getElementById('status');
     const pdEl = document.getElementById('pd');
     const resultEl = document.getElementById('results');
+    const materialsEl = document.getElementById('materials');
+    const roleDefsEl = document.getElementById('roleDefs');
     const roleButtons = Array.from(document.querySelectorAll('button[data-role]'));
     const runAllBtn = document.getElementById('runAll');
     const testLlmBtn = document.getElementById('testLlm');
@@ -165,29 +378,93 @@
     const logoutBtn = document.getElementById('logoutBtn');
     const usernameEl = document.getElementById('username');
     const passwordEl = document.getElementById('password');
+    const uploadInputEl = document.getElementById('uploadInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const saveRolesBtn = document.getElementById('saveRoles');
+    const sceneEl = document.getElementById('scene');
+    const bubbleEl = document.getElementById('bubble');
+    const progressBarEl = document.getElementById('progressBar');
+    const progressTextEl = document.getElementById('progressText');
+    const titleEl = document.querySelector('.panel h1');
+    const loginUserEl = document.createElement('span');
 
     const TOKEN_KEY = 'agent_console_token';
+    const USERNAME_KEY = 'agent_console_username';
+    let progressTimer = null;
+    let progressStartAt = 0;
+    let progressExpectedMs = 120000;
+    let promptsCache = {};
+    let authLocked = false;
 
-    function getToken() {
-      return localStorage.getItem(TOKEN_KEY) || '';
-    }
+    titleEl.style.display = 'flex';
+    titleEl.style.alignItems = 'center';
+    titleEl.style.gap = '10px';
+    loginUserEl.className = 'login-user';
+    titleEl.appendChild(loginUserEl);
 
-    function setToken(token) {
-      if (!token) {
-        localStorage.removeItem(TOKEN_KEY);
+    function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+    function setToken(token) { token ? localStorage.setItem(TOKEN_KEY, token) : localStorage.removeItem(TOKEN_KEY); }
+    function getSavedUsername() { return localStorage.getItem(USERNAME_KEY) || ''; }
+    function setSavedUsername(username) { username ? localStorage.setItem(USERNAME_KEY, username) : localStorage.removeItem(USERNAME_KEY); }
+    function authHeaders() { const t = getToken(); return t ? { 'X-Access-Token': t } : {}; }
+
+    function setAuthLock(locked, username='') {
+      authLocked = !!locked;
+      usernameEl.disabled = authLocked;
+      passwordEl.disabled = authLocked;
+      loginBtn.disabled = authLocked;
+      [usernameEl, passwordEl, loginBtn].forEach(el => el.classList.toggle('auth-locked', authLocked));
+      if (authLocked && username) {
+        loginUserEl.textContent = `当前用户：${username}`;
+        loginUserEl.style.display = 'inline-flex';
       } else {
-        localStorage.setItem(TOKEN_KEY, token);
+        loginUserEl.textContent = '';
+        loginUserEl.style.display = 'none';
       }
     }
 
-    function authHeaders() {
-      const token = getToken();
-      return token ? { 'X-Access-Token': token } : {};
+    function setBusy(busy, text='') {
+      [...roleButtons, runAllBtn, testLlmBtn, logoutBtn, uploadBtn, saveRolesBtn].forEach(b => b.disabled = busy);
+      loginBtn.disabled = busy || authLocked;
+      statusEl.textContent = text;
     }
 
-    function setBusy(busy, text='') {
-      [...roleButtons, runAllBtn, testLlmBtn, loginBtn, logoutBtn].forEach(b => b.disabled = busy);
-      statusEl.textContent = text;
+    function getSelectedMaterialIds() {
+      return Array.from(document.querySelectorAll('input[name="materialPick"]:checked')).map(el => el.value);
+    }
+
+    function setAnimation(mode) {
+      sceneEl.className = `scene ${mode || ''}`;
+      if (mode === 'cto') {
+        bubbleEl.textContent = 'CTO 正在专注分析中...';
+      } else if (mode === 'collab') {
+        bubbleEl.textContent = '多角色正在讨论中...';
+      } else {
+        bubbleEl.textContent = '等待任务开始';
+      }
+    }
+
+    function startProgress(expectedMs = 120000) {
+      stopProgress();
+      progressStartAt = Date.now();
+      progressExpectedMs = expectedMs;
+      progressBarEl.style.width = '0%';
+      progressTextEl.textContent = '预计完成时间：约 2 分钟内';
+      progressTimer = setInterval(() => {
+        const elapsed = Date.now() - progressStartAt;
+        const p = Math.min(97, Math.round((elapsed / progressExpectedMs) * 100));
+        progressBarEl.style.width = `${p}%`;
+        progressTextEl.textContent = `处理中... ${p}%`;
+      }, 300);
+    }
+
+    function stopProgress(done = false) {
+      if (progressTimer) clearInterval(progressTimer);
+      progressTimer = null;
+      if (done) {
+        progressBarEl.style.width = '100%';
+        progressTextEl.textContent = '任务完成';
+      }
     }
 
     async function authedFetch(url, options = {}) {
@@ -195,7 +472,9 @@
       const resp = await fetch(url, Object.assign({}, options, { headers }));
       if (resp.status === 401) {
         setToken('');
-        throw new Error('未登录或会话已过期，请重新登录');
+        setSavedUsername('');
+        setAuthLock(false);
+        throw new Error('未登录或会话过期，请重新登录');
       }
       return resp;
     }
@@ -208,8 +487,85 @@
         const li = document.createElement('li');
         const token = getToken();
         const link = token ? `${item.url}?t=${encodeURIComponent(token)}` : item.url;
-        li.innerHTML = `<a href="${link}" target="_blank">${item.name}</a><div class="meta">${item.mtime} | ${(item.size/1024).toFixed(1)} KB</div>`;
+        li.innerHTML = `<a href="${link}" target="_blank">${item.name}</a><div class="meta">${item.mtime} | ${(item.size / 1024).toFixed(1)} KB</div>`;
         resultEl.appendChild(li);
+      }
+    }
+
+    async function refreshMaterials() {
+      const r = await authedFetch('/api/materials');
+      const data = await r.json();
+      materialsEl.innerHTML = '';
+      for (const item of data.materials || []) {
+        const li = document.createElement('li');
+        li.innerHTML = `<label><input type="checkbox" name="materialPick" value="${item.id}" checked /> ${item.name}</label><div class="meta">${item.mtime} | ${(item.size / 1024).toFixed(1)} KB</div>`;
+        materialsEl.appendChild(li);
+      }
+      if ((data.materials || []).length === 0) {
+        materialsEl.innerHTML = '<li>暂无资料</li>';
+      }
+    }
+
+    function renderRoleDefs(prompts) {
+      promptsCache = Object.assign({}, prompts || {});
+      roleDefsEl.innerHTML = '';
+      for (const [role, prompt] of Object.entries(promptsCache)) {
+        const wrap = document.createElement('div');
+        wrap.className = 'role-item';
+        wrap.innerHTML = `<label>${role}</label><textarea data-role-def="${role}">${prompt || ''}</textarea>`;
+        roleDefsEl.appendChild(wrap);
+      }
+    }
+
+    async function loadRoleDefs() {
+      const r = await authedFetch('/api/roles');
+      const data = await r.json();
+      renderRoleDefs(data.prompts || {});
+    }
+
+    async function saveRoleDefs() {
+      const prompts = {};
+      document.querySelectorAll('textarea[data-role-def]').forEach(el => {
+        prompts[el.dataset.roleDef] = el.value.trim();
+      });
+      setBusy(true, '正在保存角色定义...');
+      try {
+        const r = await authedFetch('/api/roles/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompts })
+        });
+        const data = await r.json();
+        if (!data.ok) throw new Error(data.error || '保存失败');
+        renderRoleDefs(data.prompts || prompts);
+        statusEl.textContent = '角色定义已保存';
+      } catch (e) {
+        statusEl.textContent = `保存失败: ${e.message}`;
+      } finally {
+        setBusy(false, statusEl.textContent);
+      }
+    }
+
+    async function uploadMaterial() {
+      const file = uploadInputEl.files && uploadInputEl.files[0];
+      if (!file) {
+        statusEl.textContent = '请先选择要上传的资料文件';
+        return;
+      }
+      setBusy(true, '正在上传资料...');
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await authedFetch('/api/upload-material', { method: 'POST', body: fd });
+        const data = await r.json();
+        if (!data.ok) throw new Error(data.error || '上传失败');
+        uploadInputEl.value = '';
+        statusEl.textContent = `上传成功: ${data.file}`;
+        await refreshMaterials();
+      } catch (e) {
+        statusEl.textContent = `上传失败: ${e.message}`;
+      } finally {
+        setBusy(false, statusEl.textContent);
       }
     }
 
@@ -224,15 +580,17 @@
       try {
         const r = await fetch('/api/login', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
         });
         const data = await r.json();
         if (!data.ok) throw new Error(data.error || '登录失败');
         setToken(data.token || '');
-        statusEl.textContent = '登录成功';
+        setSavedUsername(username);
+        setAuthLock(true, username);
         passwordEl.value = '';
-        await refreshResults();
+        statusEl.textContent = '登录成功';
+        await Promise.all([refreshResults(), refreshMaterials(), loadRoleDefs()]);
       } catch (e) {
         statusEl.textContent = `登录失败: ${e.message}`;
       } finally {
@@ -242,22 +600,30 @@
 
     function logout() {
       setToken('');
+      setSavedUsername('');
+      setAuthLock(false);
       resultEl.innerHTML = '';
+      materialsEl.innerHTML = '';
+      roleDefsEl.innerHTML = '';
+      setAnimation('');
+      stopProgress();
       statusEl.textContent = '已退出';
     }
 
     async function runRole(role) {
       const productDefinition = pdEl.value.trim();
       if (!productDefinition) {
-        statusEl.textContent = '请先输入产品团队定义';
+        statusEl.textContent = '请先输入产品定义';
         return;
       }
+      setAnimation(role === 'CTO' ? 'cto' : '');
+      startProgress(120000);
       setBusy(true, `正在运行 ${role}...`);
       try {
         const r = await authedFetch('/api/run-agent', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ role, productDefinition })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role, productDefinition, materialIds: getSelectedMaterialIds() })
         });
         const data = await r.json();
         if (!data.ok) throw new Error(data.error || '执行失败');
@@ -265,7 +631,10 @@
         const link = `${data.url}?t=${encodeURIComponent(token)}`;
         statusEl.innerHTML = `${role} 已完成: <a href="${link}" target="_blank">${data.file}</a>`;
         await refreshResults();
+        stopProgress(true);
       } catch (e) {
+        stopProgress(false);
+        progressTextEl.textContent = '任务失败';
         statusEl.textContent = `错误: ${e.message}`;
       } finally {
         setBusy(false, statusEl.textContent);
@@ -275,15 +644,17 @@
     async function runCollaboration() {
       const productDefinition = pdEl.value.trim();
       if (!productDefinition) {
-        statusEl.textContent = '请先输入产品团队定义';
+        statusEl.textContent = '请先输入产品定义';
         return;
       }
-      setBusy(true, '正在进行多角色协作讨论（可能需要几十秒）...');
+      setAnimation('collab');
+      startProgress(120000);
+      setBusy(true, '正在进行多角色协助讨论（预计 2 分钟内）...');
       try {
         const r = await authedFetch('/api/run-collaboration', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ productDefinition })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productDefinition, materialIds: getSelectedMaterialIds() })
         });
         const data = await r.json();
         if (!data.ok) throw new Error(data.error || '执行失败');
@@ -291,7 +662,10 @@
         const link = `${data.url}?t=${encodeURIComponent(token)}`;
         statusEl.innerHTML = `协作完成: <a href="${link}" target="_blank">${data.file}</a>`;
         await refreshResults();
+        stopProgress(true);
       } catch (e) {
+        stopProgress(false);
+        progressTextEl.textContent = '任务失败';
         statusEl.textContent = `错误: ${e.message}`;
       } finally {
         setBusy(false, statusEl.textContent);
@@ -303,13 +677,13 @@
       try {
         const r = await authedFetch('/api/test-llm', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: '{}'
         });
         const data = await r.json();
         if (!data.ok) throw new Error(data.error || '测试失败');
         const x = data.result || {};
-        statusEl.textContent = `连通成功\nprovider: ${x.provider}\nmodel: ${x.model}\npreview: ${x.preview || ''}`;
+        statusEl.textContent = `连通成功: ${x.provider} / ${x.model}\n${x.preview || ''}`;
       } catch (e) {
         statusEl.textContent = `连通失败: ${e.message}`;
       } finally {
@@ -322,13 +696,20 @@
     testLlmBtn.addEventListener('click', testLlm);
     loginBtn.addEventListener('click', login);
     logoutBtn.addEventListener('click', logout);
+    uploadBtn.addEventListener('click', uploadMaterial);
+    saveRolesBtn.addEventListener('click', saveRoleDefs);
 
     if (getToken()) {
-      refreshResults().catch(() => {
+      const username = getSavedUsername() || usernameEl.value.trim() || 'admin';
+      setAuthLock(true, username);
+      Promise.all([refreshResults(), refreshMaterials(), loadRoleDefs()]).catch(() => {
         setToken('');
+        setSavedUsername('');
+        setAuthLock(false);
         statusEl.textContent = '会话失效，请重新登录';
       });
     } else {
+      setAuthLock(false);
       statusEl.textContent = '请先登录';
     }
   </script>
