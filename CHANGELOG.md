@@ -1,26 +1,43 @@
 # Changelog
 
+## v1.5.0 - 2026-03-03
+
+- Added persistent project sessions (`projects.json`).
+- Added project APIs:
+  - `GET /api/projects`
+  - `GET /api/projects/<id>`
+  - `POST /api/projects/save`
+- Added frontend project workflow:
+  - Create/save project
+  - Select and load historical project
+  - View per-project discussion history
+- `run-agent` and `run-collaboration` now bind outputs to `projectId`.
+
+## v1.4.0 - 2026-03-03
+
+- Improved collaboration markdown readability.
+- Moved conclusion to Chapter 1.
+- Each round is now a separate chapter with a round summary.
+
 ## v1.3.0 - 2026-03-03
 
-- `Design/Test` 角色拆分为三个独立角色：
-  - `SCH design`（负责原理图设计）
-  - `PCB design`（负责 PCB 设计）
-  - `test`（负责测试）
-- 前端角色展示升级为不同卡通人物风格（按角色区分配色）。
+- Split `Design/Test` into:
+  - `SCH design`
+  - `PCB design`
+  - `test`
+- Added distinct cartoon avatar styles per role.
 
 ## v1.2.0 - 2026-03-03
 
-- 新增 `PM（产品经理）` 角色。
-- 前端新增 `运行 PM` 按钮和 PM 角色动画展示。
-- PM 已纳入单角色运行与多角色协作流程。
+- Added `PM` role.
 
 ## v1.1.0 - 2026-03-03
 
-- 登录密码调整为 `admin`。
-- 登录成功后，标题右侧显示当前登录用户名。
-- 登录成功后，账号输入框、密码输入框、登录按钮置灰并禁用。
+- Login password changed to `admin`.
+- Show logged-in username on the right side of title.
+- Disable login controls after successful login.
 
 ## v1.0.0 - 2026-03-03
 
-- 初始发布版本。
-- 支持登录鉴权、单角色运行、多角色协作、结果文件输出。
+- Initial release.
+

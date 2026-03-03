@@ -8,6 +8,7 @@ import os
 import re
 import secrets
 import traceback
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib import error, parse, request
@@ -17,6 +18,7 @@ WEB_DIR = BASE_DIR / "web"
 OUTPUT_DIR = BASE_DIR / "outputs"
 MATERIAL_DIR = BASE_DIR / "materials"
 ROLE_PROMPTS_PATH = BASE_DIR / "role_prompts.json"
+PROJECTS_DB_PATH = BASE_DIR / "projects.json"
 
 OUTPUT_DIR.mkdir(exist_ok=True)
 MATERIAL_DIR.mkdir(exist_ok=True)
@@ -84,6 +86,110 @@ def list_material_files():
             }
         )
     return out
+
+
+def _load_projects_db() -> dict:
+    if not PROJECTS_DB_PATH.exists():
+        return {"projects": []}
+    try:
+        data = json.loads(PROJECTS_DB_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {"projects": []}
+    if not isinstance(data, dict):
+        return {"projects": []}
+    projects = data.get("projects")
+    if not isinstance(projects, list):
+        return {"projects": []}
+    return {"projects": projects}
+
+
+def _save_projects_db(db: dict) -> None:
+    PROJECTS_DB_PATH.write_text(json.dumps(db, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _project_summary(project: dict) -> dict:
+    return {
+        "id": project.get("id", ""),
+        "name": project.get("name", "Untitled"),
+        "createdAt": project.get("createdAt", ""),
+        "updatedAt": project.get("updatedAt", ""),
+        "historyCount": len(project.get("history") or []),
+        "lastFile": project.get("lastFile", ""),
+    }
+
+
+def list_projects() -> list:
+    db = _load_projects_db()
+    projects = [p for p in db.get("projects", []) if isinstance(p, dict)]
+    projects.sort(key=lambda p: p.get("updatedAt", ""), reverse=True)
+    return [_project_summary(p) for p in projects]
+
+
+def get_project(project_id: str):
+    db = _load_projects_db()
+    for p in db.get("projects", []):
+        if isinstance(p, dict) and p.get("id") == project_id:
+            return p
+    return None
+
+
+def save_project(name: str, product_definition: str, project_id: str = "") -> dict:
+    db = _load_projects_db()
+    now = dt.datetime.now().isoformat(timespec="seconds")
+    clean_name = (name or "").strip() or "Untitled Project"
+    clean_pd = (product_definition or "").strip()
+    projects = db.get("projects", [])
+
+    if project_id:
+        for p in projects:
+            if isinstance(p, dict) and p.get("id") == project_id:
+                p["name"] = clean_name
+                p["productDefinition"] = clean_pd
+                p["updatedAt"] = now
+                _save_projects_db(db)
+                return p
+
+    new_project = {
+        "id": project_id or uuid.uuid4().hex[:12],
+        "name": clean_name,
+        "productDefinition": clean_pd,
+        "createdAt": now,
+        "updatedAt": now,
+        "lastFile": "",
+        "history": [],
+    }
+    projects.append(new_project)
+    db["projects"] = projects
+    _save_projects_db(db)
+    return new_project
+
+
+def append_project_history(project_id: str, run_type: str, file_name: str, product_definition: str = "") -> None:
+    if not project_id:
+        return
+    db = _load_projects_db()
+    now = dt.datetime.now().isoformat(timespec="seconds")
+    for p in db.get("projects", []):
+        if isinstance(p, dict) and p.get("id") == project_id:
+            history = p.get("history")
+            if not isinstance(history, list):
+                history = []
+            history.insert(
+                0,
+                {
+                    "time": now,
+                    "type": run_type,
+                    "file": file_name,
+                    "url": f"/outputs/{file_name}",
+                },
+            )
+            p["history"] = history[:100]
+            p["lastFile"] = file_name
+            p["updatedAt"] = now
+            if product_definition.strip():
+                p["productDefinition"] = product_definition.strip()
+            _save_projects_db(db)
+            return
 
 
 def load_role_prompts() -> dict:
@@ -338,6 +444,17 @@ class AgentService:
             discussion[role] = self.llm.generate(ROLE_PROMPTS[role], prompt)
         rounds.append(("Round 2", discussion))
 
+        round_summaries = []
+        for label, data in rounds:
+            round_input = "\n\n".join([f"## {role}\n{data[role][:2200]}" for role in ROLES])
+            summary = self.llm.generate(
+                ROLE_PROMPTS["Review"],
+                "请基于本轮各角色发言输出本轮总结（markdown），包含："
+                "本轮结论、主要共识、关键分歧、待验证项、下一步行动（最多5条）。\n\n"
+                f"本轮记录:\n{round_input}",
+            )
+            round_summaries.append((label, summary))
+
         synthesis_input = "\n\n".join(
             [f"## {label} - {role}\n{content[:3000]}" for label, data in rounds for role, content in data.items()]
         )
@@ -353,26 +470,29 @@ class AgentService:
             "",
             f"- 时间: {dt.datetime.now().isoformat(timespec='seconds')}",
             "",
-            "## 产品定义",
+            "## 1. 结论",
+            "",
+            final,
+            "",
+            "## 2. 产品定义",
             "```text",
             product_definition.strip(),
             "```",
             "",
         ]
 
-        for label, data in rounds:
-            out.append(f"## {label}")
+        for idx, (label, data) in enumerate(rounds, start=1):
+            out.append(f"## {idx + 2}. {label}")
+            out.append("")
+            out.append("### 本轮总结")
+            out.append("")
+            out.append(round_summaries[idx - 1][1])
             out.append("")
             for role in ROLES:
                 out.append(f"### {role}")
                 out.append("")
                 out.append(data[role])
                 out.append("")
-
-        out.append("## Final Synthesis")
-        out.append("")
-        out.append(final)
-        out.append("")
 
         final_md = "\n".join(out)
         filename = f"{now_ts()}_collaboration.md"
@@ -491,6 +611,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, "roles": ROLES, "prompts": ROLE_PROMPTS})
                 return
 
+            if path == "/api/projects":
+                self._json(200, {"ok": True, "projects": list_projects()})
+                return
+
+            if path.startswith("/api/projects/"):
+                project_id = path.replace("/api/projects/", "", 1).strip()
+                project = get_project(project_id)
+                if not project:
+                    self._json(404, {"ok": False, "error": "Project not found"})
+                    return
+                self._json(200, {"ok": True, "project": project})
+                return
+
             if path == "/api/auth-info":
                 self._json(200, {"ok": True, "authEnabled": AUTH_ENABLED})
                 return
@@ -561,28 +694,41 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, "prompts": ROLE_PROMPTS})
                 return
 
+            if self.path == "/api/projects/save":
+                data = self._read_json()
+                project_id = str(data.get("id", "")).strip()
+                name = str(data.get("name", "")).strip()
+                pd = str(data.get("productDefinition", "")).strip()
+                project = save_project(name, pd, project_id=project_id)
+                self._json(200, {"ok": True, "project": project, "summary": _project_summary(project)})
+                return
+
             if self.path == "/api/run-agent":
                 data = self._read_json()
                 role = str(data.get("role", "")).strip()
                 pd = str(data.get("productDefinition", "")).strip()
+                project_id = str(data.get("projectId", "")).strip()
                 material_ids = data.get("materialIds") or []
                 if not pd:
                     self._json(400, {"ok": False, "error": "productDefinition is required"})
                     return
                 merged = merge_product_definition(pd, material_ids)
                 filename, content = self.service.run_single(role, merged)
+                append_project_history(project_id, "single", filename, pd)
                 self._json(200, {"ok": True, "file": filename, "url": f"/outputs/{filename}", "preview": content[:2000]})
                 return
 
             if self.path == "/api/run-collaboration":
                 data = self._read_json()
                 pd = str(data.get("productDefinition", "")).strip()
+                project_id = str(data.get("projectId", "")).strip()
                 material_ids = data.get("materialIds") or []
                 if not pd:
                     self._json(400, {"ok": False, "error": "productDefinition is required"})
                     return
                 merged = merge_product_definition(pd, material_ids)
                 filename, content = self.service.run_collaboration(merged)
+                append_project_history(project_id, "collaboration", filename, pd)
                 self._json(200, {"ok": True, "file": filename, "url": f"/outputs/{filename}", "preview": content[:2000]})
                 return
 

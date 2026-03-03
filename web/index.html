@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -97,6 +97,23 @@
       gap: 8px;
       margin-bottom: 10px;
     }
+    .project-row {
+      display: grid;
+      grid-template-columns: 1.3fr .9fr auto auto;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .project-history {
+      margin: 8px 0 10px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0b1b2d;
+      max-height: 130px;
+      overflow: auto;
+      font-size: 12px;
+    }
+    .project-history .meta { margin: 2px 0 0; }
     .btn-grid {
       margin-top: 10px;
       display: grid;
@@ -304,6 +321,7 @@
     @media (max-width: 980px) {
       .wrap { grid-template-columns: 1fr; }
       .auth-row { grid-template-columns: 1fr; }
+      .project-row { grid-template-columns: 1fr; }
       .btn-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
       .split { grid-template-columns: 1fr; }
     }
@@ -321,6 +339,14 @@
         <button id="loginBtn">登录</button>
         <button id="logoutBtn" class="warn">退出</button>
       </div>
+
+      <div class="project-row">
+        <select id="projectSelect"></select>
+        <input id="projectName" placeholder="新项目名称（可选）" />
+        <button id="loadProjectBtn" class="alt">加载项目</button>
+        <button id="saveProjectBtn" class="alt">保存/新建</button>
+      </div>
+      <div id="projectHistory" class="project-history">暂无项目历史</div>
 
       <textarea id="pd" placeholder="输入产品定义（目标、约束、里程碑、预算、质量要求等）"></textarea>
 
@@ -399,6 +425,11 @@
     const uploadInputEl = document.getElementById('uploadInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const saveRolesBtn = document.getElementById('saveRoles');
+    const projectSelectEl = document.getElementById('projectSelect');
+    const projectNameEl = document.getElementById('projectName');
+    const loadProjectBtn = document.getElementById('loadProjectBtn');
+    const saveProjectBtn = document.getElementById('saveProjectBtn');
+    const projectHistoryEl = document.getElementById('projectHistory');
     const sceneEl = document.getElementById('scene');
     const bubbleEl = document.getElementById('bubble');
     const progressBarEl = document.getElementById('progressBar');
@@ -408,11 +439,13 @@
 
     const TOKEN_KEY = 'agent_console_token';
     const USERNAME_KEY = 'agent_console_username';
+    const PROJECT_KEY = 'agent_console_project_id';
     let progressTimer = null;
     let progressStartAt = 0;
     let progressExpectedMs = 120000;
     let promptsCache = {};
     let authLocked = false;
+    let currentProjectId = '';
 
     titleEl.style.display = 'flex';
     titleEl.style.alignItems = 'center';
@@ -424,7 +457,117 @@
     function setToken(token) { token ? localStorage.setItem(TOKEN_KEY, token) : localStorage.removeItem(TOKEN_KEY); }
     function getSavedUsername() { return localStorage.getItem(USERNAME_KEY) || ''; }
     function setSavedUsername(username) { username ? localStorage.setItem(USERNAME_KEY, username) : localStorage.removeItem(USERNAME_KEY); }
+    function getSavedProjectId() { return localStorage.getItem(PROJECT_KEY) || ''; }
+    function setSavedProjectId(projectId) { projectId ? localStorage.setItem(PROJECT_KEY, projectId) : localStorage.removeItem(PROJECT_KEY); }
     function authHeaders() { const t = getToken(); return t ? { 'X-Access-Token': t } : {}; }
+
+    function projectDisplayName(project) {
+      const n = (project && project.name) ? project.name : 'Untitled Project';
+      const t = (project && project.updatedAt) ? project.updatedAt.replace('T', ' ') : '';
+      return t ? `${n} (${t})` : n;
+    }
+
+    function renderProjectHistory(project) {
+      const history = (project && project.history) || [];
+      projectHistoryEl.innerHTML = '';
+      if (!history.length) {
+        projectHistoryEl.textContent = '暂无项目历史';
+        return;
+      }
+      const ul = document.createElement('ul');
+      ul.className = 'list';
+      history.forEach(item => {
+        const li = document.createElement('li');
+        const token = getToken();
+        const url = token ? `${item.url}?t=${encodeURIComponent(token)}` : item.url;
+        const type = item.type === 'collaboration' ? '协作' : '单角色';
+        li.innerHTML = `<a href="${url}" target="_blank">${item.file}</a><div class="meta">${item.time} | ${type}</div>`;
+        ul.appendChild(li);
+      });
+      projectHistoryEl.appendChild(ul);
+    }
+
+    async function refreshProjects(selectedId = '') {
+      const r = await authedFetch('/api/projects');
+      const data = await r.json();
+      const projects = data.projects || [];
+      projectSelectEl.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = '选择历史项目...';
+      projectSelectEl.appendChild(placeholder);
+      projects.forEach(p => {
+        const op = document.createElement('option');
+        op.value = p.id;
+        op.textContent = projectDisplayName(p);
+        projectSelectEl.appendChild(op);
+      });
+
+      const preferredId = selectedId || currentProjectId || getSavedProjectId();
+      if (preferredId && projects.some(p => p.id === preferredId)) {
+        projectSelectEl.value = preferredId;
+      } else {
+        projectSelectEl.value = '';
+      }
+    }
+
+    async function loadProject(projectId = '') {
+      const id = (projectId || projectSelectEl.value || '').trim();
+      if (!id) {
+        statusEl.textContent = '请先选择一个历史项目';
+        return;
+      }
+      const r = await authedFetch(`/api/projects/${encodeURIComponent(id)}`);
+      const data = await r.json();
+      if (!data.ok || !data.project) throw new Error(data.error || '项目加载失败');
+      const p = data.project;
+      currentProjectId = p.id;
+      setSavedProjectId(currentProjectId);
+      projectSelectEl.value = p.id;
+      projectNameEl.value = p.name || '';
+      pdEl.value = p.productDefinition || '';
+      renderProjectHistory(p);
+      statusEl.textContent = `已加载项目: ${p.name || p.id}`;
+    }
+
+    async function saveProject() {
+      const name = projectNameEl.value.trim();
+      if (!name && !currentProjectId) {
+        statusEl.textContent = '新建项目请先输入项目名称';
+        return '';
+      }
+      const r = await authedFetch('/api/projects/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentProjectId || '',
+          name,
+          productDefinition: pdEl.value.trim()
+        })
+      });
+      const data = await r.json();
+      if (!data.ok || !data.project) throw new Error(data.error || '项目保存失败');
+      currentProjectId = data.project.id;
+      setSavedProjectId(currentProjectId);
+      projectNameEl.value = data.project.name || projectNameEl.value;
+      await refreshProjects(currentProjectId);
+      projectSelectEl.value = currentProjectId;
+      renderProjectHistory(data.project);
+      statusEl.textContent = `项目已保存: ${data.project.name}`;
+      return currentProjectId;
+    }
+
+    async function ensureProjectId() {
+      if (currentProjectId) {
+        await saveProject();
+        return currentProjectId;
+      }
+      if (!projectNameEl.value.trim()) {
+        const stamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
+        projectNameEl.value = `项目_${stamp}`;
+      }
+      return await saveProject();
+    }
 
     function setAuthLock(locked, username='') {
       authLocked = !!locked;
@@ -442,7 +585,8 @@
     }
 
     function setBusy(busy, text='') {
-      [...roleButtons, runAllBtn, testLlmBtn, logoutBtn, uploadBtn, saveRolesBtn].forEach(b => b.disabled = busy);
+      [...roleButtons, runAllBtn, testLlmBtn, logoutBtn, uploadBtn, saveRolesBtn, loadProjectBtn, saveProjectBtn].forEach(b => b.disabled = busy);
+      projectSelectEl.disabled = busy;
       loginBtn.disabled = busy || authLocked;
       statusEl.textContent = text;
     }
@@ -491,6 +635,8 @@
       if (resp.status === 401) {
         setToken('');
         setSavedUsername('');
+        setSavedProjectId('');
+        currentProjectId = '';
         setAuthLock(false);
         throw new Error('未登录或会话过期，请重新登录');
       }
@@ -608,7 +754,13 @@
         setAuthLock(true, username);
         passwordEl.value = '';
         statusEl.textContent = '登录成功';
-        await Promise.all([refreshResults(), refreshMaterials(), loadRoleDefs()]);
+        await Promise.all([refreshResults(), refreshMaterials(), loadRoleDefs(), refreshProjects()]);
+        const savedProjectId = getSavedProjectId();
+        if (savedProjectId) {
+          try { await loadProject(savedProjectId); } catch (_) {}
+        } else {
+          renderProjectHistory({ history: [] });
+        }
       } catch (e) {
         statusEl.textContent = `登录失败: ${e.message}`;
       } finally {
@@ -623,6 +775,11 @@
       resultEl.innerHTML = '';
       materialsEl.innerHTML = '';
       roleDefsEl.innerHTML = '';
+      projectSelectEl.innerHTML = '';
+      projectNameEl.value = '';
+      projectHistoryEl.textContent = '暂无项目历史';
+      currentProjectId = '';
+      setSavedProjectId('');
       setAnimation('');
       stopProgress();
       statusEl.textContent = '已退出';
@@ -638,17 +795,19 @@
       startProgress(120000);
       setBusy(true, `正在运行 ${role}...`);
       try {
+        const projectId = await ensureProjectId();
         const r = await authedFetch('/api/run-agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role, productDefinition, materialIds: getSelectedMaterialIds() })
+          body: JSON.stringify({ role, productDefinition, materialIds: getSelectedMaterialIds(), projectId })
         });
         const data = await r.json();
         if (!data.ok) throw new Error(data.error || '执行失败');
         const token = getToken();
         const link = `${data.url}?t=${encodeURIComponent(token)}`;
         statusEl.innerHTML = `${role} 已完成: <a href="${link}" target="_blank">${data.file}</a>`;
-        await refreshResults();
+        await Promise.all([refreshResults(), refreshProjects(projectId)]);
+        await loadProject(projectId);
         stopProgress(true);
       } catch (e) {
         stopProgress(false);
@@ -669,17 +828,19 @@
       startProgress(120000);
       setBusy(true, '正在进行多角色协助讨论（预计 2 分钟内）...');
       try {
+        const projectId = await ensureProjectId();
         const r = await authedFetch('/api/run-collaboration', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productDefinition, materialIds: getSelectedMaterialIds() })
+          body: JSON.stringify({ productDefinition, materialIds: getSelectedMaterialIds(), projectId })
         });
         const data = await r.json();
         if (!data.ok) throw new Error(data.error || '执行失败');
         const token = getToken();
         const link = `${data.url}?t=${encodeURIComponent(token)}`;
         statusEl.innerHTML = `协作完成: <a href="${link}" target="_blank">${data.file}</a>`;
-        await refreshResults();
+        await Promise.all([refreshResults(), refreshProjects(projectId)]);
+        await loadProject(projectId);
         stopProgress(true);
       } catch (e) {
         stopProgress(false);
@@ -716,18 +877,39 @@
     logoutBtn.addEventListener('click', logout);
     uploadBtn.addEventListener('click', uploadMaterial);
     saveRolesBtn.addEventListener('click', saveRoleDefs);
+    loadProjectBtn.addEventListener('click', () => loadProject().catch(e => {
+      statusEl.textContent = `加载项目失败: ${e.message}`;
+    }));
+    saveProjectBtn.addEventListener('click', () => saveProject().catch(e => {
+      statusEl.textContent = `保存项目失败: ${e.message}`;
+    }));
+    projectSelectEl.addEventListener('change', () => {
+      if (!projectSelectEl.value) return;
+      loadProject(projectSelectEl.value).catch(e => {
+        statusEl.textContent = `加载项目失败: ${e.message}`;
+      });
+    });
 
     if (getToken()) {
       const username = getSavedUsername() || usernameEl.value.trim() || 'admin';
       setAuthLock(true, username);
-      Promise.all([refreshResults(), refreshMaterials(), loadRoleDefs()]).catch(() => {
+      Promise.all([refreshResults(), refreshMaterials(), loadRoleDefs(), refreshProjects()]).then(async () => {
+        const savedProjectId = getSavedProjectId();
+        if (savedProjectId) {
+          try { await loadProject(savedProjectId); } catch (_) {}
+        } else {
+          renderProjectHistory({ history: [] });
+        }
+      }).catch(() => {
         setToken('');
         setSavedUsername('');
+        setSavedProjectId('');
         setAuthLock(false);
         statusEl.textContent = '会话失效，请重新登录';
       });
     } else {
       setAuthLock(false);
+      renderProjectHistory({ history: [] });
       statusEl.textContent = '请先登录';
     }
   </script>
