@@ -20,11 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 OUTPUT_DIR = BASE_DIR / "outputs"
 MATERIAL_DIR = BASE_DIR / "materials"
+MEMORY_DIR = BASE_DIR / "memory"
 ROLE_PROMPTS_PATH = BASE_DIR / "role_prompts.json"
 PROJECTS_DB_PATH = BASE_DIR / "projects.json"
 
 OUTPUT_DIR.mkdir(exist_ok=True)
 MATERIAL_DIR.mkdir(exist_ok=True)
+MEMORY_DIR.mkdir(exist_ok=True)
 
 ROLES = ["CTO", "PM", "SCH design", "PCB design", "test", "DFM", "Risk", "Review"]
 DEFAULT_ROLE_PROMPTS = {
@@ -91,6 +93,135 @@ def list_material_files():
             }
         )
     return out
+
+
+def _basic_desensitize(text: str) -> str:
+    out = text or ""
+    # Email
+    out = re.sub(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", "[email]", out)
+    # URLs
+    out = re.sub(r"(?i)\bhttps?://[^\s)]+", "[url]", out)
+    # Chinese mainland style mobile numbers
+    out = re.sub(r"\b1[3-9]\d{9}\b", "[phone]", out)
+    # IPv4
+    out = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", "[ip]", out)
+    # Common secret/token-like patterns
+    out = re.sub(r"\b(?:sk|rk|pk|ghp|gho|xoxb)-[A-Za-z0-9_-]{8,}\b", "[secret]", out)
+    # Long numeric ids
+    out = re.sub(r"\b\d{15,}\b", "[number]", out)
+    return out
+
+
+def _pick_yesterday_or_latest_memory():
+    files = [p for p in MEMORY_DIR.glob("*.md") if p.is_file()]
+    if not files:
+        return None
+
+    yesterday = (dt.datetime.now() - dt.timedelta(days=1)).date()
+
+    def parse_date_from_name(name: str):
+        m = re.search(r"(20\d{2})[-_]?(\d{2})[-_]?(\d{2})", name)
+        if not m:
+            return None
+        try:
+            return dt.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except Exception:
+            return None
+
+    # 1) Exact match on filename date for yesterday
+    for p in sorted(files, key=lambda x: x.stat().st_mtime, reverse=True):
+        d = parse_date_from_name(p.stem)
+        if d == yesterday:
+            return p
+
+    # 2) Exact match on file mtime date for yesterday
+    for p in sorted(files, key=lambda x: x.stat().st_mtime, reverse=True):
+        if dt.datetime.fromtimestamp(p.stat().st_mtime).date() == yesterday:
+            return p
+
+    # 3) Fallback latest
+    return sorted(files, key=lambda x: x.stat().st_mtime, reverse=True)[0]
+
+
+def get_yesterday_note(max_lines: int = 8, max_chars: int = 520) -> dict:
+    target = _pick_yesterday_or_latest_memory()
+    if not target:
+        return {
+            "ok": True,
+            "hasNote": False,
+            "note": "暂无可用记录。请在 memory/ 目录放入 .md 日志。",
+            "sourceFile": "",
+            "sourceTime": "",
+        }
+
+    raw = target.read_text(encoding="utf-8", errors="ignore")
+    sanitized = _basic_desensitize(raw)
+    lines = [ln.strip() for ln in sanitized.splitlines() if ln.strip()]
+    picked = lines[:max_lines]
+    note = "\n".join(picked)
+    if len(note) > max_chars:
+        note = note[:max_chars].rstrip() + "..."
+
+    return {
+        "ok": True,
+        "hasNote": True,
+        "note": note or "该记录为空。",
+        "sourceFile": target.name,
+        "sourceTime": dt.datetime.fromtimestamp(target.stat().st_mtime).isoformat(timespec="seconds"),
+    }
+
+
+def _strip_md_line(line: str) -> str:
+    s = (line or "").strip()
+    s = re.sub(r"^#{1,6}\s*", "", s)
+    s = re.sub(r"^[-*+]\s+", "", s)
+    s = re.sub(r"^\d+\.\s+", "", s)
+    s = re.sub(r"`+", "", s)
+    return s.strip()
+
+
+def _extract_brief_points(md_text: str, max_points: int = 4, max_chars_each: int = 80) -> list:
+    points = []
+    for raw in (md_text or "").splitlines():
+        ln = _strip_md_line(raw)
+        if not ln:
+            continue
+        if ln.startswith("[") and ln.endswith("]"):
+            continue
+        if len(ln) > max_chars_each:
+            ln = ln[:max_chars_each].rstrip() + "..."
+        points.append(ln)
+        if len(points) >= max_points:
+            break
+    return points
+
+
+def write_memory_note(run_type: str, role: str, product_definition: str, output_file: str, output_md: str) -> None:
+    now = dt.datetime.now()
+    day = now.strftime("%Y-%m-%d")
+    target = MEMORY_DIR / f"{day}.md"
+    ts = now.strftime("%H:%M:%S")
+    title = f"## {ts} | {run_type} | {role or 'N/A'}"
+    pd_brief = _basic_desensitize((product_definition or "").strip().replace("\r\n", "\n"))
+    if len(pd_brief) > 160:
+        pd_brief = pd_brief[:160].rstrip() + "..."
+    points = _extract_brief_points(_basic_desensitize(output_md or ""))
+
+    block = [title]
+    if output_file:
+        block.append(f"- 输出文件: {output_file}")
+    if pd_brief:
+        block.append(f"- 输入摘要: {pd_brief}")
+    if points:
+        block.append("- 结果摘记:")
+        for p in points:
+            block.append(f"  - {p}")
+    block.append("")
+
+    previous = ""
+    if target.exists():
+        previous = target.read_text(encoding="utf-8", errors="ignore").rstrip() + "\n\n"
+    target.write_text(previous + "\n".join(block), encoding="utf-8")
 
 
 def _load_projects_db() -> dict:
@@ -750,6 +881,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, "status": "healthy"})
                 return
 
+            if path == "/api/yesterday-note":
+                self._json(200, get_yesterday_note())
+                return
+
             if path.startswith("/outputs/"):
                 name = parse.unquote(path.replace("/outputs/", "", 1))
                 safe = Path(name).name
@@ -837,6 +972,7 @@ class Handler(BaseHTTPRequestHandler):
                 merged = merge_product_definition(pd, material_ids)
                 filename, content = self.service.run_single(role, merged)
                 append_project_history(project_id, "single", filename, pd)
+                write_memory_note("single", role, pd, filename, content)
                 self._json(200, {"ok": True, "file": filename, "url": f"/outputs/{filename}", "preview": content[:2000]})
                 return
 
@@ -851,6 +987,7 @@ class Handler(BaseHTTPRequestHandler):
                 merged = merge_product_definition(pd, material_ids)
                 filename, content = self.service.run_collaboration(merged)
                 append_project_history(project_id, "collaboration", filename, pd)
+                write_memory_note("collaboration", "multi-role", pd, filename, content)
                 self._json(200, {"ok": True, "file": filename, "url": f"/outputs/{filename}", "preview": content[:2000]})
                 return
 
