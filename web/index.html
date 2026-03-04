@@ -165,6 +165,10 @@
     #results a:visited {
       color: #ffffff;
     }
+    a.md-file,
+    a.md-file:visited {
+      color: #ffffff;
+    }
     .meta {
       font-size: 11px;
       color: var(--muted);
@@ -492,7 +496,8 @@
         const token = getToken();
         const url = token ? `${item.url}?t=${encodeURIComponent(token)}` : item.url;
         const type = item.type === 'collaboration' ? '协作' : '单角色';
-        li.innerHTML = `<a href="${url}" target="_blank">${item.file}</a><div class="meta">${item.time} | ${type}</div>`;
+        const mdClass = item.file && item.file.toLowerCase().endsWith('.md') ? ' class="md-file"' : '';
+        li.innerHTML = `<a href="${url}" target="_blank"${mdClass}>${item.file}</a><div class="meta">${item.time} | ${type}</div>`;
         ul.appendChild(li);
       });
       projectHistoryEl.appendChild(ul);
@@ -662,7 +667,8 @@
         const li = document.createElement('li');
         const token = getToken();
         const link = token ? `${item.url}?t=${encodeURIComponent(token)}` : item.url;
-        li.innerHTML = `<a href="${link}" target="_blank">${item.name}</a><div class="meta">${item.mtime} | ${(item.size / 1024).toFixed(1)} KB</div>`;
+        const mdClass = item.name && item.name.toLowerCase().endsWith('.md') ? ' class="md-file"' : '';
+        li.innerHTML = `<a href="${link}" target="_blank"${mdClass}>${item.name}</a><div class="meta">${item.mtime} | ${(item.size / 1024).toFixed(1)} KB</div>`;
         resultEl.appendChild(li);
       }
     }
