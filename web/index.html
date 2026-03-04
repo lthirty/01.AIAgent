@@ -207,6 +207,8 @@
     .avatar {
       --head: #ffd9b1;
       --head-border: #f3c99a;
+      --ear: #ffd9b1;
+      --snout: #ffe8cf;
       --outfit: #5ea3d6;
       --outfit-border: #87b9de;
       width: 54px;
@@ -224,7 +226,13 @@
       width: 30px;
       height: 30px;
       border-radius: 50%;
-      background: var(--head);
+      background:
+        radial-gradient(circle at 8px 4px, var(--ear) 0 5px, transparent 5.5px),
+        radial-gradient(circle at 22px 4px, var(--ear) 0 5px, transparent 5.5px),
+        radial-gradient(circle at 11px 13px, #1b1f24 0 1.6px, transparent 2px),
+        radial-gradient(circle at 19px 13px, #1b1f24 0 1.6px, transparent 2px),
+        radial-gradient(ellipse at 15px 20px, var(--snout) 0 6px, transparent 6.4px),
+        var(--head);
       border: 2px solid var(--head-border);
     }
     .avatar::after {
@@ -252,8 +260,22 @@
       transform: translateY(0);
       animation: bob 1.2s ease-in-out infinite;
     }
-    .avatar.role-cto { --outfit: #4b8fd7; --outfit-border: #76b5f2; }
-    .avatar.role-pm { --outfit: #4a78c7; --outfit-border: #7ea5e7; --head: #f7d6b3; }
+    .avatar.role-cto {
+      --head: #9b6a3d;
+      --head-border: #7a4f2c;
+      --ear: #9b6a3d;
+      --snout: #d7b38f;
+      --outfit: #6d452b;
+      --outfit-border: #98603a;
+    }
+    .avatar.role-pm {
+      --head: #f5f7fb;
+      --head-border: #cfd7e3;
+      --ear: #f5f7fb;
+      --snout: #ffffff;
+      --outfit: #dde6f2;
+      --outfit-border: #b8c6d8;
+    }
     .avatar.role-sch { --outfit: #2fa486; --outfit-border: #6dceb6; }
     .avatar.role-pcb { --outfit: #3a9e4f; --outfit-border: #7fcf90; --head: #f5cc9f; }
     .avatar.role-test { --outfit: #6a7aa1; --outfit-border: #9eb0dc; }
@@ -397,8 +419,8 @@
       <div class="anim-zone">
         <h2>工作动画</h2>
         <div class="scene" id="scene">
-          <div class="avatar cto role-cto"><div class="name">CTO</div></div>
-          <div class="avatar role-pm"><div class="name">PM</div></div>
+          <div class="avatar cto role-cto"><div class="name">布布</div></div>
+          <div class="avatar role-pm"><div class="name">一二</div></div>
           <div class="avatar role-sch"><div class="name">SCH</div></div>
           <div class="avatar role-pcb"><div class="name">PCB</div></div>
           <div class="avatar role-test"><div class="name">Test</div></div>
