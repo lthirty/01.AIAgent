@@ -242,6 +242,24 @@
       margin: 8px 0 10px;
       display: flex;
       justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+    }
+    .bright-ctl {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #17375c;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(255,255,255,.55);
+      border: 1px solid #8db3db;
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+    .bright-ctl input[type="range"] {
+      width: 120px;
+      accent-color: #1d79e7;
     }
     .anim-bright-on {
       background: #1d79e7 !important;
@@ -269,7 +287,7 @@
     }
     .scene.star-office::before {
       background: linear-gradient(180deg, rgba(8, 20, 40, .015) 0%, rgba(8, 20, 40, .01) 58%, rgba(5, 13, 28, .03) 100%);
-      opacity: .25;
+      opacity: var(--scene-mask-opacity, .25);
     }
     .scene.star-office.high-bright {
       background:
@@ -901,6 +919,11 @@
       <h1>工作动画</h1>
       <p>左侧用于配置与执行，右侧用于状态模拟展示。</p>
       <div class="anim-tools">
+        <label class="bright-ctl" for="bgBrightnessRange">
+          <span>背景亮度</span>
+          <input id="bgBrightnessRange" type="range" min="70" max="160" step="1" value="100" />
+          <span id="bgBrightnessValue">100%</span>
+        </label>
         <button id="toggleBrightBtn" class="alt">切换浅绿背景</button>
       </div>
       <div class="anim-zone">
@@ -968,6 +991,8 @@
     const toggleAgentDefsBtn = document.getElementById('toggleAgentDefsBtn');
     const toggleSplitResizeBtn = document.getElementById('toggleSplitResizeBtn');
     const toggleBrightBtn = document.getElementById('toggleBrightBtn');
+    const bgBrightnessRangeEl = document.getElementById('bgBrightnessRange');
+    const bgBrightnessValueEl = document.getElementById('bgBrightnessValue');
     const projectHistoryEl = document.getElementById('projectHistory');
     const agentDefsPanelEl = document.getElementById('agentDefsPanel');
     const splitEl = document.querySelector('.split');
@@ -986,6 +1011,7 @@
     const USERNAME_KEY = 'agent_console_username';
     const PROJECT_KEY = 'agent_console_project_id';
     const BG_THEME_KEY = 'agent_console_bg_theme';
+    const BG_BRIGHTNESS_KEY = 'agent_console_bg_brightness';
     let progressTimer = null;
     let progressStartAt = 0;
     let progressExpectedMs = 120000;
@@ -997,6 +1023,7 @@
     let agentDefsOpen = false;
     let splitPanelsOpen = true;
     let bgTheme = 'blue';
+    let bgBrightness = 100;
 
     titleEl.style.display = 'flex';
     titleEl.style.alignItems = 'center';
@@ -1022,13 +1049,37 @@
       toggleSplitResizeBtn.classList.toggle('split-toggle-on', !splitPanelsOpen);
       toggleSplitResizeBtn.textContent = splitPanelsOpen ? '收缩资料与结果栏' : '展开资料与结果栏';
     }
+    function applySceneBackground() {
+      const b = Math.max(70, Math.min(160, Number(bgBrightness) || 100));
+      const t = (b - 70) / 90; // 0..1
+      const lightTop = (0.06 + t * 0.60).toFixed(3);
+      const lightBottom = (0.03 + t * 0.40).toFixed(3);
+      const maskOpacity = (0.36 - t * 0.28).toFixed(3);
+      const baseColor = bgTheme === 'green' ? '#e4f4e9' : '#dbe9f9';
+      if (bgTheme === 'green') {
+        animZoneEl.style.background = `radial-gradient(120% 130% at 50% -30%, rgba(220,247,227,${(0.55 + t * 0.35).toFixed(3)}) 0%, rgba(189,238,203,${(0.52 + t * 0.34).toFixed(3)}) 55%, rgba(153,223,173,${(0.48 + t * 0.32).toFixed(3)}) 100%), #d9f0e0`;
+      } else {
+        animZoneEl.style.background = `radial-gradient(120% 130% at 50% -30%, rgba(215,233,255,${(0.55 + t * 0.35).toFixed(3)}) 0%, rgba(184,215,255,${(0.52 + t * 0.34).toFixed(3)}) 55%, rgba(155,197,245,${(0.48 + t * 0.32).toFixed(3)}) 100%), #d7e9ff`;
+      }
+      sceneEl.style.setProperty('--scene-mask-opacity', maskOpacity);
+      sceneEl.style.background = `linear-gradient(180deg, rgba(255,255,255,${lightTop}) 0%, rgba(255,255,255,${lightBottom}) 100%), ${baseColor} url('/web/star-office/office_bg.webp') center/cover no-repeat`;
+      sceneEl.style.backgroundBlendMode = 'screen, normal';
+      bgBrightnessValueEl.textContent = `${b}%`;
+    }
     function setBgTheme(theme) {
       bgTheme = theme === 'green' ? 'green' : 'blue';
       animZoneEl.classList.toggle('bg-green', bgTheme === 'green');
       applySceneClass();
+      applySceneBackground();
       toggleBrightBtn.classList.toggle('anim-bright-on', bgTheme === 'green');
       toggleBrightBtn.textContent = bgTheme === 'green' ? '切换浅蓝背景' : '切换浅绿背景';
       localStorage.setItem(BG_THEME_KEY, bgTheme);
+    }
+    function setBgBrightness(value) {
+      bgBrightness = Math.max(70, Math.min(160, Number(value) || 100));
+      bgBrightnessRangeEl.value = String(bgBrightness);
+      localStorage.setItem(BG_BRIGHTNESS_KEY, String(bgBrightness));
+      applySceneBackground();
     }
 
     function projectDisplayName(project) {
@@ -1158,6 +1209,7 @@
     function setBusy(busy, text='') {
       [...roleButtons, runAllBtn, testLlmBtn, logoutBtn, uploadBtn, saveRolesBtn, loadProjectBtn, saveProjectBtn, toggleAgentDefsBtn, toggleSplitResizeBtn, toggleBrightBtn].forEach(b => b.disabled = busy);
       projectSelectEl.disabled = busy;
+      bgBrightnessRangeEl.disabled = busy;
       loginBtn.disabled = busy || authLocked;
       statusEl.textContent = text;
     }
@@ -1517,6 +1569,8 @@
     toggleAgentDefsBtn.addEventListener('click', () => setAgentDefsOpen(!agentDefsOpen));
     toggleSplitResizeBtn.addEventListener('click', () => setSplitPanelsOpen(!splitPanelsOpen));
     toggleBrightBtn.addEventListener('click', () => setBgTheme(bgTheme === 'green' ? 'blue' : 'green'));
+    bgBrightnessRangeEl.addEventListener('input', () => setBgBrightness(bgBrightnessRangeEl.value));
+    bgBrightnessRangeEl.addEventListener('change', () => setBgBrightness(bgBrightnessRangeEl.value));
     projectSelectEl.addEventListener('change', () => {
       if (!projectSelectEl.value) return;
       loadProject(projectSelectEl.value).catch(e => {
@@ -1528,6 +1582,7 @@
     setAgentDefsOpen(false);
     setSplitPanelsOpen(true);
     setBgTheme(localStorage.getItem(BG_THEME_KEY) === 'green' ? 'green' : 'blue');
+    setBgBrightness(localStorage.getItem(BG_BRIGHTNESS_KEY) || 100);
 
     if (getToken()) {
       const username = getSavedUsername() || usernameEl.value.trim() || 'admin';
