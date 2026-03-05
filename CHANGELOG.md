@@ -1,9 +1,27 @@
-# Changelog
+﻿# Changelog
+
+## v1.10.1 - 2026-03-05
+
+- 主界面布局固定为 6:4（左侧控制台 : 右侧动画区），收缩/展开资料栏不再影响左右占比。
+- 资料与结果区域改为默认展开，按钮切换为“收缩/展开资料与结果栏”。
+- 动画背景亮度重构为“仅背景提亮”，不再影响人物层亮度。
+- 动画背景改为亮色调，并新增按钮支持浅蓝/浅绿主题切换（默认浅蓝，状态本地持久化）。
+## v1.10.0 - 2026-03-05
+
+- Added a master toggle button for panel resizing:
+  - 开启两栏缩放 / 锁定两栏大小
+  - Controls both 上传资料 and 结果文件 panels together.
+- Applied Star Office UI animation assets to the right-side scene:
+  - Office background + worker sprite + syncing sprite.
+  - Files copied into web/star-office/.
+- Added static asset route support in backend:
+  - GET /web/<relative_path> serves files under web/.
+- Expanded page width and kept right-side animation area wider than left.
 
 ## v1.9.0 - 2026-03-03
 
 - Added RK3588 project-specific reusable template:
-  - `materials/templates/RK3588_SCH_PCB_规则模板_v1.0.md`
+  - `materials/templates/RK3588_SCH_PCB_瑙勫垯妯℃澘_v1.0.md`
 - Added fill-in tables for real project execution:
   - power rail table
   - clock planning table
@@ -17,7 +35,7 @@
 ## v1.8.0 - 2026-03-03
 
 - Added reusable SCH/PCB rule template:
-  - `materials/templates/SCH_PCB_规则模板_v1.0.md`
+  - `materials/templates/SCH_PCB_瑙勫垯妯℃澘_v1.0.md`
 - Organized template by hardware modules for real-project reuse:
   - Power
   - Clock
@@ -97,3 +115,5 @@
 ## v1.0.0 - 2026-03-03
 
 - Initial release.
+
+

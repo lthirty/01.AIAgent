@@ -4,6 +4,7 @@ import argparse
 import cgi
 import datetime as dt
 import json
+import mimetypes
 import os
 import re
 import secrets
@@ -900,6 +901,17 @@ class Handler(BaseHTTPRequestHandler):
                 target = MATERIAL_DIR / name
                 if target.exists() and target.is_file():
                     self._bytes(200, target.read_bytes())
+                    return
+                self._json(404, {"ok": False, "error": "File not found"})
+                return
+
+            if path.startswith("/web/"):
+                rel_path = parse.unquote(path.replace("/web/", "", 1)).lstrip("/\\")
+                target = (WEB_DIR / rel_path).resolve()
+                web_root = WEB_DIR.resolve()
+                if str(target).startswith(str(web_root)) and target.exists() and target.is_file():
+                    content_type = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
+                    self._bytes(200, target.read_bytes(), content_type)
                     return
                 self._json(404, {"ok": False, "error": "File not found"})
                 return

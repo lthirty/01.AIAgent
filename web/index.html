@@ -29,11 +29,11 @@
       min-height: 100vh;
     }
     .wrap {
-      max-width: 1300px;
+      max-width: 1500px;
       margin: 20px auto;
       padding: 0 14px 24px;
       display: grid;
-      grid-template-columns: 1.25fr .95fr;
+      grid-template-columns: minmax(0, 6fr) minmax(0, 4fr);
       gap: 14px;
     }
     .panel {
@@ -42,6 +42,7 @@
       border-radius: 14px;
       padding: 14px;
       box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      min-width: 0;
     }
     h1, h2 {
       margin: 0 0 8px;
@@ -99,7 +100,7 @@
     }
     .project-row {
       display: grid;
-      grid-template-columns: 1.3fr .9fr auto auto;
+      grid-template-columns: 1.3fr .9fr auto auto auto;
       gap: 8px;
       margin-bottom: 10px;
     }
@@ -135,10 +136,26 @@
       white-space: pre-wrap;
     }
     .split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
       gap: 10px;
       margin-top: 10px;
+    }
+    .split-toolbar {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .split > .card {
+      flex: 1 1 0;
+      min-width: 240px;
+      min-height: 220px;
+      overflow: auto;
+    }
+    .split-toggle-on {
+      background: #1d79e7 !important;
+    }
+    .split.collapsed {
+      display: none;
     }
     .card {
       border: 1px solid var(--line);
@@ -193,11 +210,18 @@
       font-weight: 700;
     }
     .role-item textarea { min-height: 88px; font-size: 12px; }
-    .anim-zone {
+    .agent-def-panel {
       margin-top: 10px;
+      display: none;
+    }
+    .agent-def-panel.open {
+      display: block;
+    }
+    .anim-zone {
+      margin-top: 0;
       border: 2px solid #ff5e8c;
       border-radius: 12px;
-      background: radial-gradient(120% 130% at 50% -30%, #2d3258 0%, #15193a 60%, #111433 100%);
+      background: radial-gradient(120% 130% at 50% -30%, #d7e9ff 0%, #b8d7ff 55%, #9bc5f5 100%);
       padding: 10px;
       min-height: 320px;
       position: relative;
@@ -214,6 +238,24 @@
       overflow: hidden;
       box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
     }
+    .anim-tools {
+      margin: 8px 0 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .anim-bright-on {
+      background: #1d79e7 !important;
+    }
+    .anim-zone.bg-green {
+      background: radial-gradient(120% 130% at 50% -30%, #dcf7e3 0%, #bdeecb 55%, #99dfad 100%);
+    }
+    .scene.star-office {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.32) 0%, rgba(255,255,255,.2) 100%),
+        #dbe9f9 url('/web/star-office/office_bg.webp') center/cover no-repeat;
+      background-blend-mode: screen, normal;
+      image-rendering: pixelated;
+    }
     .scene::before {
       content: "";
       position: absolute;
@@ -225,12 +267,87 @@
       opacity: .95;
       pointer-events: none;
     }
+    .scene.star-office::before {
+      background: linear-gradient(180deg, rgba(8, 20, 40, .015) 0%, rgba(8, 20, 40, .01) 58%, rgba(5, 13, 28, .03) 100%);
+      opacity: .25;
+    }
+    .scene.star-office.high-bright {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.48) 0%, rgba(255,255,255,.3) 100%),
+        #eef6ff url('/web/star-office/office_bg.webp') center/cover no-repeat;
+      background-blend-mode: screen, normal;
+    }
+    .scene.star-office.high-bright::before {
+      background: linear-gradient(180deg, rgba(8, 20, 40, .01) 0%, rgba(8, 20, 40, .008) 58%, rgba(5, 13, 28, .02) 100%);
+      opacity: .18;
+    }
+    .scene.star-office.bg-green {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.22) 100%),
+        #e4f4e9 url('/web/star-office/office_bg.webp') center/cover no-repeat;
+      background-blend-mode: screen, normal;
+    }
     .pixel-object {
       position: absolute;
       border: 2px solid #6e4f35;
       background: #9a7350;
       box-shadow: inset -2px -2px 0 rgba(0,0,0,.18), inset 2px 2px 0 rgba(255,255,255,.2);
       z-index: 1;
+    }
+    .scene.star-office .pixel-object {
+      opacity: .22;
+    }
+    .star-worker {
+      position: absolute;
+      left: 56%;
+      top: 86px;
+      width: 88px;
+      height: 88px;
+      transform: translateX(-50%);
+      z-index: 3;
+      background-image: url('/web/star-office/star-working-spritesheet-grid.webp');
+      background-size: 1200% 100%;
+      background-position: 0 0;
+      image-rendering: pixelated;
+      animation: star-idle 1.2s steps(1, end) infinite;
+      filter: drop-shadow(0 5px 0 rgba(18, 24, 42, .45));
+    }
+    .star-sync {
+      position: absolute;
+      left: 68%;
+      top: 84px;
+      width: 92px;
+      height: 92px;
+      transform: translateX(-50%);
+      z-index: 3;
+      opacity: 0;
+      pointer-events: none;
+      background-image: url('/web/star-office/sync-animation-v3-grid.webp');
+      background-size: 1200% 100%;
+      background-position: 0 0;
+      image-rendering: pixelated;
+      animation: star-sync .85s steps(12, end) infinite;
+    }
+    .scene.state-writing .star-worker {
+      animation: star-working .95s steps(12, end) infinite;
+    }
+    .scene.state-researching .star-worker {
+      animation: star-working 1.25s steps(12, end) infinite;
+      filter: drop-shadow(0 5px 0 rgba(26, 44, 72, .6)) saturate(1.08);
+    }
+    .scene.state-executing .star-worker {
+      animation: star-working .72s steps(12, end) infinite;
+    }
+    .scene.state-syncing .star-worker {
+      animation: star-working .82s steps(12, end) infinite;
+    }
+    .scene.state-syncing .star-sync,
+    .scene.collab .star-sync {
+      opacity: 1;
+    }
+    .scene.state-error .star-worker {
+      animation: star-working .58s steps(12, end) infinite;
+      filter: drop-shadow(0 5px 0 rgba(138, 24, 42, .65)) saturate(1.35);
     }
     .desk-main {
       left: 18px;
@@ -679,12 +796,24 @@
       0%,100% { transform: translateX(-50%) translateY(0); }
       50% { transform: translateX(-50%) translateY(-5px); }
     }
+    @keyframes star-idle {
+      0%, 100% { background-position-x: 0%; }
+      50% { background-position-x: 0%; }
+    }
+    @keyframes star-working {
+      from { background-position-x: 0%; }
+      to { background-position-x: 100%; }
+    }
+    @keyframes star-sync {
+      from { background-position-x: 0%; }
+      to { background-position-x: 100%; }
+    }
     @media (max-width: 980px) {
       .wrap { grid-template-columns: 1fr; }
       .auth-row { grid-template-columns: 1fr; }
       .project-row { grid-template-columns: 1fr; }
       .btn-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
-      .split { grid-template-columns: 1fr; }
+      .split { flex-direction: column; }
       .scene { height: 190px; }
       .scene .avatar { transform: translateY(0) scale(.88); transform-origin: top left; }
       .scene .avatar.cto { top: 86px; left: 46px; }
@@ -719,11 +848,23 @@
         <input id="projectName" placeholder="新项目名称（可选）" />
         <button id="loadProjectBtn" class="alt">加载项目</button>
         <button id="saveProjectBtn" class="alt">保存/新建</button>
+        <button id="toggleAgentDefsBtn" class="alt">Agent定义</button>
       </div>
+
+      <div id="agentDefsPanel" class="card agent-def-panel">
+        <h2>Agent 定义</h2>
+        <p>可查看并修改每个角色的定义，保存后立即生效。</p>
+        <div id="roleDefs"></div>
+        <button id="saveRoles" class="alt">保存角色定义</button>
+      </div>
+
       <div id="projectHistory" class="project-history">暂无项目历史</div>
 
       <textarea id="pd" placeholder="输入产品定义（目标、约束、里程碑、预算、质量要求等）"></textarea>
 
+      <div class="split-toolbar">
+        <button id="toggleSplitResizeBtn" class="alt">收缩资料与结果栏</button>
+      </div>
       <div class="split">
         <div class="card">
           <h2>上传资料</h2>
@@ -753,9 +894,17 @@
         <button id="testLlm" class="btn-green">测试模型连通性</button>
       </div>
 
+      <div class="status" id="status"></div>
+    </section>
+
+    <aside class="panel">
+      <h1>工作动画</h1>
+      <p>左侧用于配置与执行，右侧用于状态模拟展示。</p>
+      <div class="anim-tools">
+        <button id="toggleBrightBtn" class="alt">切换浅绿背景</button>
+      </div>
       <div class="anim-zone">
-        <h2>工作动画</h2>
-        <div class="scene" id="scene">
+        <div class="scene star-office" id="scene">
           <div class="state-zone zone-idle"><span class="zlabel">idle</span></div>
           <div class="state-zone zone-writing"><span class="zlabel">writing</span></div>
           <div class="state-zone zone-researching"><span class="zlabel">researching</span></div>
@@ -777,6 +926,8 @@
           <div class="avatar role-dfm"><div class="name">DFM</div></div>
           <div class="avatar role-risk"><div class="name">Risk</div></div>
           <div class="avatar role-review"><div class="name">Review</div></div>
+          <div class="star-worker"></div>
+          <div class="star-sync"></div>
           <div class="office-tag">STAR OFFICE · AI TEAM</div>
         </div>
         <div class="bubble" id="bubble">正在讨论关键方案...</div>
@@ -791,15 +942,6 @@
           <div class="note-meta" id="noteMeta"></div>
         </div>
       </div>
-
-      <div class="status" id="status"></div>
-    </section>
-
-    <aside class="panel">
-      <h1>Agent 定义</h1>
-      <p>可查看并修改每个角色的定义，保存后立即生效。</p>
-      <div id="roleDefs"></div>
-      <button id="saveRoles" class="alt">保存角色定义</button>
     </aside>
   </div>
 
@@ -823,7 +965,13 @@
     const projectNameEl = document.getElementById('projectName');
     const loadProjectBtn = document.getElementById('loadProjectBtn');
     const saveProjectBtn = document.getElementById('saveProjectBtn');
+    const toggleAgentDefsBtn = document.getElementById('toggleAgentDefsBtn');
+    const toggleSplitResizeBtn = document.getElementById('toggleSplitResizeBtn');
+    const toggleBrightBtn = document.getElementById('toggleBrightBtn');
     const projectHistoryEl = document.getElementById('projectHistory');
+    const agentDefsPanelEl = document.getElementById('agentDefsPanel');
+    const splitEl = document.querySelector('.split');
+    const animZoneEl = document.querySelector('.anim-zone');
     const sceneEl = document.getElementById('scene');
     const bubbleEl = document.getElementById('bubble');
     const progressBarEl = document.getElementById('progressBar');
@@ -837,6 +985,7 @@
     const TOKEN_KEY = 'agent_console_token';
     const USERNAME_KEY = 'agent_console_username';
     const PROJECT_KEY = 'agent_console_project_id';
+    const BG_THEME_KEY = 'agent_console_bg_theme';
     let progressTimer = null;
     let progressStartAt = 0;
     let progressExpectedMs = 120000;
@@ -845,6 +994,9 @@
     let currentProjectId = '';
     let sceneMode = '';
     let lobsterState = 'idle';
+    let agentDefsOpen = false;
+    let splitPanelsOpen = true;
+    let bgTheme = 'blue';
 
     titleEl.style.display = 'flex';
     titleEl.style.alignItems = 'center';
@@ -859,6 +1011,25 @@
     function getSavedProjectId() { return localStorage.getItem(PROJECT_KEY) || ''; }
     function setSavedProjectId(projectId) { projectId ? localStorage.setItem(PROJECT_KEY, projectId) : localStorage.removeItem(PROJECT_KEY); }
     function authHeaders() { const t = getToken(); return t ? { 'X-Access-Token': t } : {}; }
+    function setAgentDefsOpen(open) {
+      agentDefsOpen = !!open;
+      agentDefsPanelEl.classList.toggle('open', agentDefsOpen);
+      toggleAgentDefsBtn.textContent = agentDefsOpen ? '收起Agent定义' : '展开Agent定义';
+    }
+    function setSplitPanelsOpen(open) {
+      splitPanelsOpen = !!open;
+      splitEl.classList.toggle('collapsed', !splitPanelsOpen);
+      toggleSplitResizeBtn.classList.toggle('split-toggle-on', !splitPanelsOpen);
+      toggleSplitResizeBtn.textContent = splitPanelsOpen ? '收缩资料与结果栏' : '展开资料与结果栏';
+    }
+    function setBgTheme(theme) {
+      bgTheme = theme === 'green' ? 'green' : 'blue';
+      animZoneEl.classList.toggle('bg-green', bgTheme === 'green');
+      applySceneClass();
+      toggleBrightBtn.classList.toggle('anim-bright-on', bgTheme === 'green');
+      toggleBrightBtn.textContent = bgTheme === 'green' ? '切换浅蓝背景' : '切换浅绿背景';
+      localStorage.setItem(BG_THEME_KEY, bgTheme);
+    }
 
     function projectDisplayName(project) {
       const n = (project && project.name) ? project.name : 'Untitled Project';
@@ -985,7 +1156,7 @@
     }
 
     function setBusy(busy, text='') {
-      [...roleButtons, runAllBtn, testLlmBtn, logoutBtn, uploadBtn, saveRolesBtn, loadProjectBtn, saveProjectBtn].forEach(b => b.disabled = busy);
+      [...roleButtons, runAllBtn, testLlmBtn, logoutBtn, uploadBtn, saveRolesBtn, loadProjectBtn, saveProjectBtn, toggleAgentDefsBtn, toggleSplitResizeBtn, toggleBrightBtn].forEach(b => b.disabled = busy);
       projectSelectEl.disabled = busy;
       loginBtn.disabled = busy || authLocked;
       statusEl.textContent = text;
@@ -996,7 +1167,8 @@
     }
 
     function applySceneClass() {
-      sceneEl.className = `scene ${sceneMode} state-${lobsterState}`.trim();
+      const bgClass = bgTheme === 'green' ? 'bg-green' : '';
+      sceneEl.className = `scene star-office ${bgClass} ${sceneMode} state-${lobsterState}`.trim();
     }
 
     function roleToState(role) {
@@ -1219,6 +1391,7 @@
       setToken('');
       setSavedUsername('');
       setAuthLock(false);
+      setAgentDefsOpen(false);
       resultEl.innerHTML = '';
       materialsEl.innerHTML = '';
       roleDefsEl.innerHTML = '';
@@ -1341,6 +1514,9 @@
     saveProjectBtn.addEventListener('click', () => saveProject().catch(e => {
       statusEl.textContent = `保存项目失败: ${e.message}`;
     }));
+    toggleAgentDefsBtn.addEventListener('click', () => setAgentDefsOpen(!agentDefsOpen));
+    toggleSplitResizeBtn.addEventListener('click', () => setSplitPanelsOpen(!splitPanelsOpen));
+    toggleBrightBtn.addEventListener('click', () => setBgTheme(bgTheme === 'green' ? 'blue' : 'green'));
     projectSelectEl.addEventListener('change', () => {
       if (!projectSelectEl.value) return;
       loadProject(projectSelectEl.value).catch(e => {
@@ -1349,6 +1525,9 @@
     });
 
     setAnimation('');
+    setAgentDefsOpen(false);
+    setSplitPanelsOpen(true);
+    setBgTheme(localStorage.getItem(BG_THEME_KEY) === 'green' ? 'green' : 'blue');
 
     if (getToken()) {
       const username = getSavedUsername() || usernameEl.value.trim() || 'admin';
